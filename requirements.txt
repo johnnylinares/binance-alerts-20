@@ -6,6 +6,7 @@ attrs==25.3.0
 certifi==2025.6.15
 charset-normalizer==3.4.2
 dateparser==1.2.1
+Flask==2.2.5
 frozenlist==1.7.0
 h11==0.14.0
 httpcore==0.16.3
