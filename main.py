@@ -16,10 +16,9 @@ from config.settings import (
 # ===== MAIN CODE =====
 async def start_bot():
     """Function to start the bot and price tracker."""
-    client = Client(API_KEY, API_SECRET)
     bot = Bot(token=BOT_TOKEN)
     await log_message(message="🤖 BOT ACTIVATED")
-    await price_tracker(client, bot, CHANNEL_ID)
+    await price_tracker(bot, CHANNEL_ID)
 
 def run_bot():
     asyncio.run(start_bot())
