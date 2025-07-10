@@ -50,7 +50,7 @@ async def price_tracker(bot, channel_id):
     # ===== WEBSOCKET REQUESTS =====
     sockets = []
     for symbol in usdt_pairs:
-        socket = bsm.symbol_ticker_socket(symbol)
+        socket = bsm.symbol_ticker_socket('!ticker@arr')
         sockets.append(socket)
     
     # ===== HANDLE SOCKET MESSAGES =====
