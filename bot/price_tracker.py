@@ -48,11 +48,8 @@ async def price_tracker(bot, channel_id):
     usdt_pairs = pair_filter
     
     # ===== WEBSOCKET REQUESTS =====
-    sockets = []
-    for symbol in usdt_pairs:
-        socket = bsm.symbol_ticker_socket('!ticker@arr')
-        sockets.append(socket)
-    
+    socket = bsm.symbol_ticker_socket('!ticker@arr')
+
     # ===== HANDLE SOCKET MESSAGES =====
     async def handle_socket_message(msg):
         nonlocal last_log_time
@@ -99,12 +96,15 @@ async def price_tracker(bot, channel_id):
         except Exception as e:
             await log_message(f"[WEBSOCKET ERROR] {e}")
     
-    # Iniciar todos los sockets
-    async with bsm._get_socket_multiplexer(sockets) as stream:
+    async with socket as s:
         while True:
             try:
-                res = await stream.recv()
-                await handle_socket_message(res)
+                msg = await s.recv()
+                # msg es una lista de diccionarios, uno por símbolo
+                for ticker in msg:
+                    symbol = ticker['s']
+                    if symbol in usdt_pairs:
+                        await handle_socket_message(ticker)
             except Exception as e:
                 await log_message(f"[STREAM ERROR] {e}")
                 await asyncio.sleep(5)
