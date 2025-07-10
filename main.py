@@ -1,9 +1,11 @@
-import asyncio
-import threading
-from flask import Flask, jsonify
-from binance.client import Client
-from telegram import Bot
+# ===== LIBRARYS =====
+import asyncio # For asynchronous operations
+import threading # HTTPS request for 24/7 uptime
+from flask import Flask, jsonify # For web server
+from binance.client import Client # For Binance API
+from telegram import Bot # For Telegram Bot API
 
+# ===== MODULES =====
 from bot.price_tracker import price_tracker
 from logs import log_message
 from config.settings import (
@@ -11,20 +13,25 @@ from config.settings import (
     BOT_TOKEN, CHANNEL_ID,
 )
 
-# ===== CONFIGURACIÓN FLASK =====
-app = Flask(__name__)
-
-# ===== BOT EN SEGUNDO PLANO =====
-async def bot_loop():
+# ===== MAIN CODE =====
+async def start_bot():
+    """Function to start the bot and price tracker."""
     client = Client(API_KEY, API_SECRET)
     bot = Bot(token=BOT_TOKEN)
     await log_message(message="🤖 BOT ACTIVATED")
     await price_tracker(client, bot, CHANNEL_ID)
 
 def run_bot():
-    asyncio.run(bot_loop())
+    asyncio.run(start_bot())
 
-# ===== ENDPOINTS WEB =====
+def keep_bot():
+    """Starts the bot in a separate thread to keep it running."""
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+
+# ===== HTTPS REQUEST =====
+app = Flask(__name__)
+
 @app.route('/')
 def home():
     return jsonify({"status": "active", "message": "Binance/Telegram Bot Running"})
@@ -33,27 +40,6 @@ def home():
 def ping():
     return jsonify({"status": "ok"}), 200
 
-# ===== INICIALIZACIÓN =====
-def start_background_services():
-    # Inicia el bot en un thread separado
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-
-    # Opcional: Auto-ping para mantener activo el servicio
-    if not app.debug:
-        import requests
-        def auto_ping():
-            import time
-            while True:
-                try:
-                    requests.get("https://tudominio.onrender.com/ping")
-                except:
-                    pass
-                time.sleep(240)  # Ping cada 4 minutos
-        
-        ping_thread = threading.Thread(target=auto_ping, daemon=True)
-        ping_thread.start()
-
 if __name__ == "__main__":
-    start_background_services()
+    keep_bot()
     app.run(host='0.0.0.0', port=8000)

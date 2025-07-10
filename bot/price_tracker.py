@@ -1,60 +1,112 @@
+# ===== LIBRARYS =====
 import time
 import asyncio
-from binance.client import Client
+from binance import AsyncClient, BinanceSocketManager
+from binance.exceptions import BinanceAPIException
 
-from logs import log_message
+# ===== MODULES =====
+from logs import log_message 
 from bot.alert_handler import send_alert
 
-async def price_tracker(client: Client, bot, channel_id, threshold=20):
-    await log_message(message="🤖 PRICE TRACKER ACTIVATED")
+# ===== CONSTANTS =====
+THRESHOLD = 20 # % alert´s change
+LOG_INTERVAL = 900 # 15 minute log interval
 
-    price_history = {}
-    log_interval = 600
-    last_log_time = time.time()
+# ===== WEBSOCKET TRACKER =====
+async def price_tracker(bot, channel_id):
+    await log_message("🤖 PRICE TRACKER (WebSocket) ACTIVATED")
+    
+    price_history = {} # Dictionary to store price history for each symbol
+    last_log_time = time.time() 
+    
+    client = await AsyncClient.create() # For asynchronous Binance client
+    bsm = BinanceSocketManager(client)
+    
+    # ===== COINS =====
+    exchange_info = await client.futures_exchange_info()  # Pairs info
+    now_ms = int(time.time() * 1000)
+    three_months_ms = 90 * 24 * 60 * 60 * 1000  # 90 días en ms
 
-    while True:
+    pair_filter = []
+    for s in exchange_info['symbols']:
+        if not s['symbol'].endswith('USDT'):
+            continue
+
+        onboard_date = s.get('onboardDate', 0)
+        if now_ms - onboard_date < three_months_ms:
+            continue
+        
         try:
-            tickers = client.futures_ticker()
+            ticker = await client.futures_ticker(symbol=s['symbol'])
+            volume_24h = float(ticker['quoteVolume'])  # quoteVolume es en USDT
+        except Exception:
+            continue
+        if volume_24h < 10_000_000:
+            continue
+        pair_filter.append(s['symbol'])
+
+    usdt_pairs = pair_filter
+    
+    # ===== WEBSOCKET REQUESTS =====
+    sockets = []
+    for symbol in usdt_pairs:
+        socket = bsm.futures_symbol_ticker_socket(symbol)
+        sockets.append(socket)
+    
+    # ===== HANDLE SOCKET MESSAGES =====
+    async def handle_socket_message(msg):
+        nonlocal last_log_time
+        
+        try:
+            symbol = msg['s']
+            price = float(msg['c'])
             now = time.time()
-
-            for ticker in tickers:
-                symbol = ticker['symbol']
-                price = float(ticker['lastPrice'])
-                volume_24h = round((float(ticker['volume'])) / 1000000, 1)
-
-                if not symbol.endswith("USDT"):
-                    continue
+            
+            if symbol not in price_history: 
+                price_history[symbol] = []
+            
+            # TRACKING TIME (2H)
+            price_history[symbol].append((now, price))
+            price_history[symbol] = [p for p in price_history[symbol] if now - p[0] <= 7200]
+            
+            # PERCENT CHANGE
+            if len(price_history[symbol]) >= 2:
+                old_price = price_history[symbol][0][1]
+                percentage_change = ((price - old_price) / old_price) * 100
                 
-                if symbol not in price_history:
-                    price_history[symbol] = []
-
-                price_history[symbol].append((now, price))
-                price_history[symbol] = [p for p in price_history[symbol] if now - p[0] <= 10800]
-
-                if len(price_history[symbol]) >= 2:
-                    old_price = price_history[symbol][0][1]
-                    percentage_change = ((price - old_price) / old_price) * 100
-
-                    if abs(percentage_change) >= threshold:
-                        await log_message(message=f"📊 COIN FOUND: {symbol}")
-
-                        if percentage_change > 0:
-                            emoji1 = "🟢"
-                            emoji2 = "📈"
-                        else:
-                            emoji1 = "🔴"
-                            emoji2 = "📉"
-
-                        await send_alert(symbol, percentage_change, price, emoji1, emoji2, volume_24h)
-                        price_history[symbol] = []
-                        
-            if now - last_log_time >= log_interval:
-                log_message_text = f"🔍 Checking coins"
-                await log_message(log_message_text)
+                if abs(percentage_change) >= THRESHOLD:
+                    await log_message(f"📊 COIN FOUND: {symbol}")
+                    
+                    emoji1 = "🟢" if percentage_change > 0 else "🔴"
+                    emoji2 = "📈" if percentage_change > 0 else "📉"
+                    
+                    # API REST VOLUME
+                    try:
+                        ticker = await client.futures_ticker(symbol=symbol)
+                        volume_24h = round(float(ticker['volume']) / 1000000, 1)
+                    except BinanceAPIException:
+                        volume_24h = 0.0
+                    
+                    # ===== SEND ALERT =====
+                    await send_alert(symbol, percentage_change, price, emoji1, emoji2, volume_24h)
+                    price_history[symbol] = []  # Resetear después de alerta
+            
+            # Log periódico
+            if now - last_log_time >= LOG_INTERVAL:
+                await log_message("🔍 Monitoring active WebSockets")
                 last_log_time = now
-
-            await asyncio.sleep(10)
-
+                
         except Exception as e:
-            await log_message(message=f"[ERROR] {e}")
-            await asyncio.sleep(10)
+            await log_message(f"[WEBSOCKET ERROR] {e}")
+    
+    # Iniciar todos los sockets
+    async with bsm._get_socket_multiplexer(sockets) as stream:
+        while True:
+            try:
+                res = await stream.recv()
+                await handle_socket_message(res)
+            except Exception as e:
+                await log_message(f"[STREAM ERROR] {e}")
+                await asyncio.sleep(5)
+
+    await client.close_connection()
