@@ -7,7 +7,6 @@ from telegram import Bot # For Telegram Bot API
 
 # ===== MODULES =====
 from bot.price_tracker import price_tracker
-from logs import log_message
 from config.settings import (
     API_KEY, API_SECRET,
     BOT_TOKEN, CHANNEL_ID,
@@ -17,7 +16,7 @@ from config.settings import (
 async def start_bot():
     """Function to start the bot and price tracker."""
     bot = Bot(token=BOT_TOKEN)
-    await log_message(message="🤖 BOT ACTIVATED")
+    await print("🤖 BOT ACTIVATED")
     await price_tracker(bot, CHANNEL_ID)
 
 def run_bot():
