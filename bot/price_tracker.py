@@ -5,7 +5,6 @@ from binance import AsyncClient, BinanceSocketManager
 from binance.exceptions import BinanceAPIException
 
 # ===== MODULES =====
-from logs import log_message 
 from bot.alert_handler import send_alert
 
 # ===== CONSTANTS =====
@@ -14,7 +13,7 @@ LOG_INTERVAL = 900 # 15 minute log interval
 
 # ===== WEBSOCKET TRACKER =====
 async def price_tracker(bot, channel_id):
-    await log_message("🤖 PRICE TRACKER (WebSocket) ACTIVATED")
+    await print("🤖 PRICE TRACKER (WebSocket) ACTIVATED")
     
     price_history = {} # Dictionary to store price history for each symbol
     last_log_time = time.time() 
@@ -72,7 +71,7 @@ async def price_tracker(bot, channel_id):
                 percentage_change = ((price - old_price) / old_price) * 100
                 
                 if abs(percentage_change) >= THRESHOLD:
-                    await log_message(f"📊 COIN FOUND: {symbol}")
+                    await print(f"📊 COIN FOUND: {symbol}")
                     
                     emoji1 = "🟢" if percentage_change > 0 else "🔴"
                     emoji2 = "📈" if percentage_change > 0 else "📉"
@@ -90,11 +89,11 @@ async def price_tracker(bot, channel_id):
             
             # Log periódico
             if now - last_log_time >= LOG_INTERVAL:
-                await log_message("🔍 Monitoring active WebSockets")
+                await print("🔍 Monitoring active WebSockets")
                 last_log_time = now
                 
         except Exception as e:
-            await log_message(f"[WEBSOCKET ERROR] {e}")
+            await print(f"[WEBSOCKET ERROR] {e}")
     
     async with socket as s:
         while True:
@@ -106,7 +105,7 @@ async def price_tracker(bot, channel_id):
                     if symbol in usdt_pairs:
                         await handle_socket_message(ticker)
             except Exception as e:
-                await log_message(f"[STREAM ERROR] {e}")
+                await print(f"[STREAM ERROR] {e}")
                 await asyncio.sleep(5)
 
     await client.close_connection()
