@@ -7,5 +7,5 @@ __pycache__/
 .env.*
 *.sqlite3
 *.logvenv/ 
-venv/ 
-data/alert-20-binance-telegram-bot-7db6f7e0c5d8.json:1
+*venv/ 
+*data/alert-20-binance-telegram-bot-7db6f7e0c5d8.json:1
