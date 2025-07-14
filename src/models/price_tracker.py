@@ -5,7 +5,8 @@ from binance import AsyncClient, BinanceSocketManager
 from binance.exceptions import BinanceAPIException
 
 # ===== MODULES =====
-from bot.alert_handler import send_alert
+from src.models.alert_handler import send_alert
+from src.config.logs import logging
 
 # ===== CONSTANTS =====
 THRESHOLD = 20 # % alert´s change
@@ -13,7 +14,9 @@ LOG_INTERVAL = 900 # 15 minute log interval
 
 # ===== WEBSOCKET TRACKER =====
 async def price_tracker(bot, channel_id):
-    await print("🤖 PRICE TRACKER (WebSocket) ACTIVATED")
+    """Function to track price changes and send alerts."""
+    
+    logging.info("Price tracker started successfully.")
     
     price_history = {} # Dictionary to store price history for each symbol
     last_log_time = time.time() 
@@ -71,7 +74,7 @@ async def price_tracker(bot, channel_id):
                 percentage_change = ((price - old_price) / old_price) * 100
                 
                 if abs(percentage_change) >= THRESHOLD:
-                    await print(f"📊 COIN FOUND: {symbol}")
+                    logging.info(f"📊 COIN FOUND: {symbol}")
                     
                     emoji1 = "🟢" if percentage_change > 0 else "🔴"
                     emoji2 = "📈" if percentage_change > 0 else "📉"
@@ -89,11 +92,11 @@ async def price_tracker(bot, channel_id):
             
             # Log periódico
             if now - last_log_time >= LOG_INTERVAL:
-                await print("🔍 Monitoring active WebSockets")
+                logging.info("Monitoring active")
                 last_log_time = now
                 
         except Exception as e:
-            await print(f"[WEBSOCKET ERROR] {e}")
+            logging.error(f"[WEBSOCKET ERROR] {e}")
     
     async with socket as s:
         while True:
@@ -105,7 +108,7 @@ async def price_tracker(bot, channel_id):
                     if symbol in usdt_pairs:
                         await handle_socket_message(ticker)
             except Exception as e:
-                await print(f"[STREAM ERROR] {e}")
+                logging.error(f"[STREAM ERROR] {e}")
                 await asyncio.sleep(5)
 
     await client.close_connection()

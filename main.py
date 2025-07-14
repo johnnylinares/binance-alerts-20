@@ -2,21 +2,20 @@
 import asyncio # For asynchronous operations
 import threading # HTTPS request for 24/7 uptime
 from flask import Flask, jsonify # For web server
-from binance.client import Client # For Binance API
 from telegram import Bot # For Telegram Bot API
 
 # ===== MODULES =====
-from bot.price_tracker import price_tracker
-from config.settings import (
-    API_KEY, API_SECRET,
-    BOT_TOKEN, CHANNEL_ID,
+from src.models.price_tracker import price_tracker
+from src.config.logs import logging
+from src.config.settings import (
+    BOT_TOKEN, CHANNEL_ID
 )
 
 # ===== MAIN CODE =====
 async def start_bot():
     """Function to start the bot and price tracker."""
     bot = Bot(token=BOT_TOKEN)
-    await print("🤖 BOT ACTIVATED")
+    logging.info("Bot activated successfully.")
     await price_tracker(bot, CHANNEL_ID)
 
 def run_bot():
