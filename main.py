@@ -15,7 +15,7 @@ from src.config.settings import (
 async def start_bot():
     """Function to start the bot and price tracker."""
     bot = Bot(token=BOT_TOKEN)
-    logging.info("Bot activated successfully.")
+    logging.info("Bot started.")
     await price_tracker(bot, CHANNEL_ID)
 
 def run_bot():

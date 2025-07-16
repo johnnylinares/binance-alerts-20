@@ -2,113 +2,143 @@
 import time
 import asyncio
 from binance import AsyncClient, BinanceSocketManager
-from binance.exceptions import BinanceAPIException
 
 # ===== MODULES =====
 from src.models.alert_handler import send_alert
+from src.models.signal_handler import start_operation_tracking, monitor_operations, initialize_signal_handler
 from src.config.logs import logging
 
 # ===== CONSTANTS =====
 THRESHOLD = 20 # % alert´s change
-LOG_INTERVAL = 900 # 15 minute log interval
 
-# ===== WEBSOCKET TRACKER =====
+# ===== PRICE TRACKER =====
 async def price_tracker(bot, channel_id):
-    """Function to track price changes and send alerts."""
+    """Función mejorada para rastrear cambios de precio con seguimiento de operaciones"""
+   
+    logging.info("'price_tracker' function started.")
     
-    logging.info("Price tracker started successfully.")
+    # Inicializar signal handler
+    await initialize_signal_handler()
     
-    price_history = {} # Dictionary to store price history for each symbol
-    last_log_time = time.time() 
-    
-    client = await AsyncClient.create() # For asynchronous Binance client
+    price_history = {}
+ 
+    client = await AsyncClient.create()
     bsm = BinanceSocketManager(client)
-    
-    # ===== COINS =====
-    exchange_info = await client.futures_exchange_info()  # Pairs info
-    now_ms = int(time.time() * 1000)
-    three_months_ms = 90 * 24 * 60 * 60 * 1000  # 90 días en ms
-
-    pair_filter = []
-    for s in exchange_info['symbols']:
-        if not s['symbol'].endswith('USDT'):
-            continue
-
-        onboard_date = s.get('onboardDate', 0)
-        if now_ms - onboard_date < three_months_ms:
-            continue
-        
+   
+    # Obtener pares USDT con filtros
+    exchange_info = await client.futures_exchange_info()
+    usdt_pairs = [
+        s['symbol'] for s in exchange_info['symbols']
+        if s['symbol'].endswith('USDT') and
+        (int(time.time() * 1000) - s.get('onboardDate', 0)) >= (90 * 24 * 60 * 60 * 1000)
+    ]
+   
+    # Verificar volumen para los pares filtrados
+    valid_pairs = []
+    for symbol in usdt_pairs:
         try:
-            ticker = await client.futures_ticker(symbol=s['symbol'])
-            volume_24h = float(ticker['quoteVolume'])  # quoteVolume es en USDT
+            ticker = await client.futures_ticker(symbol=symbol)
+            if float(ticker['quoteVolume']) >= 10_000_000:
+                valid_pairs.append(symbol)
         except Exception:
             continue
-        if volume_24h < 10_000_000:
-            continue
-        pair_filter.append(s['symbol'])
-
-    usdt_pairs = pair_filter
+   
+    # Convertir a set para búsquedas O(1) más eficientes
+    valid_pairs_set = set(valid_pairs)
     
-    # ===== WEBSOCKET REQUESTS =====
+    logging.info(f"Found {len(valid_pairs)} valid pairs")
+   
+    # Websocket
     socket = bsm.symbol_ticker_socket('!ticker@arr')
-
-    # ===== HANDLE SOCKET MESSAGES =====
-    async def handle_socket_message(msg):
-        nonlocal last_log_time
-        
+    
+    async def handle_socket_message(ticker_data):
         try:
-            symbol = msg['s']
-            price = float(msg['c'])
-            now = time.time()
-            
-            if symbol not in price_history: 
+            symbol = ticker_data.get('s')
+            if not symbol or symbol not in valid_pairs_set:
+                return
+               
+            price = float(ticker_data.get('c', 0))
+            if price <= 0:
+                return
+                
+            current_time = time.time()
+           
+            # Inicializar historial si es necesario
+            if symbol not in price_history:
                 price_history[symbol] = []
-            
-            # TRACKING TIME (2H)
-            price_history[symbol].append((now, price))
-            price_history[symbol] = [p for p in price_history[symbol] if now - p[0] <= 7200]
-            
-            # PERCENT CHANGE
+           
+            # Mantener solo datos de las últimas 2 horas
+            price_history[symbol].append((current_time, price))
+            price_history[symbol] = [
+                (t, p) for t, p in price_history[symbol]
+                if current_time - t <= 7200
+            ]
+           
+            # Comprobar cambio porcentual
             if len(price_history[symbol]) >= 2:
                 old_price = price_history[symbol][0][1]
-                percentage_change = ((price - old_price) / old_price) * 100
-                
-                if abs(percentage_change) >= THRESHOLD:
-                    logging.info(f"📊 COIN FOUND: {symbol}")
-                    
-                    emoji1 = "🟢" if percentage_change > 0 else "🔴"
-                    emoji2 = "📈" if percentage_change > 0 else "📉"
-                    
-                    # API REST VOLUME
+                change = ((price - old_price) / old_price) * 100
+               
+                if abs(change) >= THRESHOLD:
+                    emoji = "🟢📈" if change > 0 else "🔴📉"
                     try:
-                        ticker = await client.futures_ticker(symbol=symbol)
-                        volume_24h = round(float(ticker['volume']) / 1000000, 1)
-                    except BinanceAPIException:
-                        volume_24h = 0.0
+                        vol_data = await client.futures_ticker(symbol=symbol)
+                        volume = round(float(vol_data['volume']) / 1_000_000, 1)
+                    except Exception:
+                        volume = 0.0
+                   
+                    # Enviar alerta
+                    await send_alert(symbol, change, price, emoji[0], emoji[1], volume)
                     
-                    # ===== SEND ALERT =====
-                    await send_alert(symbol, percentage_change, price, emoji1, emoji2, volume_24h)
-                    price_history[symbol] = []  # Resetear después de alerta
-            
-            # Log periódico
-            if now - last_log_time >= LOG_INTERVAL:
-                logging.info("Monitoring active")
-                last_log_time = now
-                
+                    # Determinar dirección de la operación basada en el cambio
+                    direction = "LONG" if change > 0 else "SHORT"
+                    
+                    # Iniciar seguimiento de operación
+                    await start_operation_tracking(symbol, direction, price)
+                    
+                    logging.info(f"Started tracking operation: {symbol} - {direction} at {price}")
+                    
+                    price_history[symbol] = []  # Reset after alert  
+                   
         except Exception as e:
-            logging.error(f"[WEBSOCKET ERROR] {e}")
+            logging.error(f"Error processing {ticker_data.get('s', 'unknown')}: {str(e)}")
     
-    async with socket as s:
-        while True:
-            try:
-                msg = await s.recv()
-                # msg es una lista de diccionarios, uno por símbolo
-                for ticker in msg:
-                    symbol = ticker['s']
-                    if symbol in usdt_pairs:
-                        await handle_socket_message(ticker)
-            except Exception as e:
-                logging.error(f"[STREAM ERROR] {e}")
-                await asyncio.sleep(5)
-
-    await client.close_connection()
+    # Tarea para manejar websocket
+    async def websocket_task():
+        async with socket as s:
+            while True:
+                try:
+                    # Recibir datos del websocket
+                    all_tickers = await s.recv()
+                    
+                    # Verificar que all_tickers sea una lista válida
+                    if not all_tickers or not isinstance(all_tickers, list):
+                        continue
+                   
+                    # Procesar solo los tickers válidos
+                    tasks = []
+                    for ticker in all_tickers:
+                        if ticker and ticker.get('s') in valid_pairs_set:
+                            tasks.append(handle_socket_message(ticker))
+                    
+                    # Ejecutar tareas solo si hay alguna
+                    if tasks:
+                        await asyncio.gather(*tasks, return_exceptions=True)
+                   
+                except Exception as e:
+                    logging.error(f"WebSocket error: {str(e)}")
+                    await asyncio.sleep(5)
+    
+    # Tarea para monitorear operaciones
+    async def operations_monitor_task():
+        await monitor_operations()
+    
+    try:
+        await asyncio.gather(
+            websocket_task(),        # Procesamiento websocket
+            operations_monitor_task() # Monitoreo de operaciones
+        )
+    except Exception as e:
+        logging.error(f"Main task error: {str(e)}")
+    finally:
+        await client.close_connection()
