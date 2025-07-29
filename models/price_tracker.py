@@ -1,32 +1,27 @@
 # ===== LIBRARYS =====
 import time
 import asyncio
-from binance import AsyncClient, BinanceSocketManager
+from binance import BinanceSocketManager
 
 # ===== MODULES =====
-from src.models.alert_handler import send_alert
-from src.models.signal_handler import start_operation_tracking, monitor_operations, initialize_signal_handler
-from src.config.logs import logging
+from models.alert_handler import send_alert
 
 # ===== CONSTANTS =====
 THRESHOLD = 20 # % alert´s change
 
 # ===== PRICE TRACKER =====
-async def price_tracker(bot, channel_id):
+async def price_tracker(b_client):
     """Función mejorada para rastrear cambios de precio con seguimiento de operaciones"""
    
-    logging.info("'price_tracker' function started.")
-    
-    # Inicializar signal handler
-    await initialize_signal_handler()
+    print("'price_tracker' function started.")
+
     
     price_history = {}
  
-    client = await AsyncClient.create()
-    bsm = BinanceSocketManager(client)
+    bsm = BinanceSocketManager(b_client)
    
     # Obtener pares USDT con filtros
-    exchange_info = await client.futures_exchange_info()
+    exchange_info = await b_client.futures_exchange_info()
     usdt_pairs = [
         s['symbol'] for s in exchange_info['symbols']
         if s['symbol'].endswith('USDT') and
@@ -37,7 +32,7 @@ async def price_tracker(bot, channel_id):
     valid_pairs = []
     for symbol in usdt_pairs:
         try:
-            ticker = await client.futures_ticker(symbol=symbol)
+            ticker = await b_client.futures_ticker(symbol=symbol)
             if float(ticker['quoteVolume']) >= 10_000_000:
                 valid_pairs.append(symbol)
         except Exception:
@@ -46,7 +41,7 @@ async def price_tracker(bot, channel_id):
     # Convertir a set para búsquedas O(1) más eficientes
     valid_pairs_set = set(valid_pairs)
     
-    logging.info(f"Found {len(valid_pairs)} valid pairs")
+    print(f"Found {len(valid_pairs)} valid pairs")
    
     # Websocket
     socket = bsm.symbol_ticker_socket('!ticker@arr')
@@ -82,26 +77,18 @@ async def price_tracker(bot, channel_id):
                 if abs(change) >= THRESHOLD:
                     emoji = "🟢📈" if change > 0 else "🔴📉"
                     try:
-                        vol_data = await client.futures_ticker(symbol=symbol)
+                        vol_data = await b_client.futures_ticker(symbol=symbol)
                         volume = round(float(vol_data['volume']) / 1_000_000, 1)
                     except Exception:
                         volume = 0.0
                    
                     # Enviar alerta
                     await send_alert(symbol, change, price, emoji[0], emoji[1], volume)
-                    
-                    # Determinar dirección de la operación basada en el cambio
-                    direction = "LONG" if change > 0 else "SHORT"
-                    
-                    # Iniciar seguimiento de operación
-                    await start_operation_tracking(symbol, direction, price)
-                    
-                    logging.info(f"Started tracking operation: {symbol} - {direction} at {price}")
-                    
+        
                     price_history[symbol] = []  # Reset after alert  
                    
         except Exception as e:
-            logging.error(f"Error processing {ticker_data.get('s', 'unknown')}: {str(e)}")
+            print(f"Error processing {ticker_data.get('s', 'unknown')}: {str(e)}")
     
     # Tarea para manejar websocket
     async def websocket_task():
@@ -126,19 +113,14 @@ async def price_tracker(bot, channel_id):
                         await asyncio.gather(*tasks, return_exceptions=True)
                    
                 except Exception as e:
-                    logging.error(f"WebSocket error: {str(e)}")
+                    print(f"WebSocket error: {str(e)}")
                     await asyncio.sleep(5)
-    
-    # Tarea para monitorear operaciones
-    async def operations_monitor_task():
-        await monitor_operations()
     
     try:
         await asyncio.gather(
             websocket_task(),        # Procesamiento websocket
-            operations_monitor_task() # Monitoreo de operaciones
         )
     except Exception as e:
-        logging.error(f"Main task error: {str(e)}")
+        print(f"Main task error: {str(e)}")
     finally:
-        await client.close_connection()
+        await b_client.close_connection()

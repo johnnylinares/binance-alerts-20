@@ -1,28 +1,48 @@
-# ===== LIBRARYS =====
 import asyncio # For asynchronous operations
 import threading # HTTPS request for 24/7 uptime
+from contextlib import asynccontextmanager
 from flask import Flask, jsonify # For web server
+import telegram
 from telegram import Bot # For Telegram Bot API
+from binance import AsyncClient
 
 # ===== MODULES =====
-from src.models.price_tracker import price_tracker
-from src.config.logs import logging
-from src.config.settings import (
-    BOT_TOKEN, CHANNEL_ID
+from models.price_tracker import price_tracker
+from config.settings import (
+    API_KEY, API_SECRET, BOT_TOKEN
 )
 
+@asynccontextmanager
+async def binance_client():
+    client = None
+    try:
+        client = await AsyncClient.create(
+            api_key=API_KEY,
+            api_secret=API_SECRET
+        )
+        print("Binance client created successfully.")
+        yield client
+    finally:
+        if client:
+            await client.close_connection()
+            print("Connection closed.")
+
+t_bot = telegram.Bot(token=BOT_TOKEN)
+
 # ===== MAIN CODE =====
-async def start_bot():
-    """Function to start the bot and price tracker."""
-    bot = Bot(token=BOT_TOKEN)
-    logging.info("Bot started.")
-    await price_tracker(bot, CHANNEL_ID)
+async def main():
+    try:
+        async with binance_client() as b_client:
+
+            await price_tracker(b_client)
+            
+    except Exception as e:
+        print(f"Error en main: {e}")
 
 def run_bot():
-    asyncio.run(start_bot())
+    asyncio.run(main())
 
 def keep_bot():
-    """Starts the bot in a separate thread to keep it running."""
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
 

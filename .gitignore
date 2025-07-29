@@ -1,27 +1,19 @@
-# Entornos Python
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 .Python
 
-# Entornos virtuales
 venv/
 .venv/
 .env/
 .env*
 
-# Archivos de entorno
 .env
 .env.*
 
-# Bases de datos y archivos de datos
 *.sqlite3
 *.db
 *.sql
 
-# Archivos de log
 *.log
-
-# Archivos específicos
-data/.alert-20-binance-telegram-bot-7db6f7e0c5d8.json

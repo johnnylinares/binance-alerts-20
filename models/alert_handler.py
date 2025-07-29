@@ -3,9 +3,6 @@ import telegram
 from binance.client import Client
 import os
 
-# ===== MODULES =====
-from src.config.logs import logging
-
 # ===== ENVIRONMENT VARIABLES =====
 from dotenv import load_dotenv
 load_dotenv()
@@ -17,6 +14,6 @@ CHANNEL_ID = os.getenv("CHANNEL_ID")
 
 # ===== FUNCTION =====
 async def send_alert(symbol, percentage_change, price, emoji1, emoji2, volume_24h):
-    logging.info(message="Send alert function called")
+    print(f"Send alert function called")
     await bot.send_message(chat_id=CHANNEL_ID, text=f'{emoji1} #{symbol} {emoji2} {percentage_change:+.2f}%\n💵 ${price} 💰 ${volume_24h}M')
-    logging.info(f"{symbol} message sended")
+    print(f"{symbol} message sended")
