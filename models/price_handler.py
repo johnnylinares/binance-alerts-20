@@ -1,47 +1,16 @@
-# ===== LIBRARYS =====
 import time
 import asyncio
 from binance import BinanceSocketManager
 
-# ===== MODULES =====
 from models.alert_handler import send_alert
 
-# ===== CONSTANTS =====
 THRESHOLD = 20 # % alert´s change
 
 # ===== PRICE TRACKER =====
-async def price_tracker(b_client):
-    """Función mejorada para rastrear cambios de precio con seguimiento de operaciones"""
-   
-    print("'price_tracker' function started.")
-
-    
+async def price_tracker(coins, b_client):
     price_history = {}
  
     bsm = BinanceSocketManager(b_client)
-   
-    # Obtener pares USDT con filtros
-    exchange_info = await b_client.futures_exchange_info()
-    usdt_pairs = [
-        s['symbol'] for s in exchange_info['symbols']
-        if s['symbol'].endswith('USDT') and
-        (int(time.time() * 1000) - s.get('onboardDate', 0)) >= (90 * 24 * 60 * 60 * 1000)
-    ]
-   
-    # Verificar volumen para los pares filtrados
-    valid_pairs = []
-    for symbol in usdt_pairs:
-        try:
-            ticker = await b_client.futures_ticker(symbol=symbol)
-            if float(ticker['quoteVolume']) >= 10_000_000:
-                valid_pairs.append(symbol)
-        except Exception:
-            continue
-   
-    # Convertir a set para búsquedas O(1) más eficientes
-    valid_pairs_set = set(valid_pairs)
-    
-    print(f"Found {len(valid_pairs)} valid pairs")
    
     # Websocket
     socket = bsm.symbol_ticker_socket('!ticker@arr')
@@ -49,7 +18,7 @@ async def price_tracker(b_client):
     async def handle_socket_message(ticker_data):
         try:
             symbol = ticker_data.get('s')
-            if not symbol or symbol not in valid_pairs_set:
+            if not symbol or symbol not in coins:
                 return
                
             price = float(ticker_data.get('c', 0))
@@ -82,10 +51,9 @@ async def price_tracker(b_client):
                     except Exception:
                         volume = 0.0
                    
-                    # Enviar alerta
-                    await send_alert(symbol, change, price, emoji[0], emoji[1], volume)
+                    await send_alert(symbol, change, price, emoji[0], emoji[1], volume, b_client)
         
-                    price_history[symbol] = []  # Reset after alert  
+                    price_history[symbol] = []
                    
         except Exception as e:
             print(f"Error processing {ticker_data.get('s', 'unknown')}: {str(e)}")
@@ -105,7 +73,7 @@ async def price_tracker(b_client):
                     # Procesar solo los tickers válidos
                     tasks = []
                     for ticker in all_tickers:
-                        if ticker and ticker.get('s') in valid_pairs_set:
+                        if ticker and ticker.get('s') in coins:
                             tasks.append(handle_socket_message(ticker))
                     
                     # Ejecutar tareas solo si hay alguna

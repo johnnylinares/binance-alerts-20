@@ -4,10 +4,10 @@ from contextlib import asynccontextmanager
 from flask import Flask, jsonify # For web server
 import telegram
 from telegram import Bot # For Telegram Bot API
-from binance import AsyncClient
+from binance import AsyncClient, BinanceSocketManager
 
 # ===== MODULES =====
-from models.price_tracker import price_tracker
+from models.coin_handler import coin_handler
 from config.settings import (
     API_KEY, API_SECRET, BOT_TOKEN
 )
@@ -20,21 +20,20 @@ async def binance_client():
             api_key=API_KEY,
             api_secret=API_SECRET
         )
-        print("Binance client created successfully.")
+
+        print("Binance client & socket manager created successfully.")
         yield client
     finally:
         if client:
             await client.close_connection()
             print("Connection closed.")
 
-t_bot = telegram.Bot(token=BOT_TOKEN)
-
 # ===== MAIN CODE =====
 async def main():
     try:
         async with binance_client() as b_client:
 
-            await price_tracker(b_client)
+            await coin_handler(b_client)
             
     except Exception as e:
         print(f"Error en main: {e}")
