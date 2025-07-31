@@ -8,6 +8,8 @@ THRESHOLD = 20 # % alert´s change
 
 # ===== PRICE TRACKER =====
 async def price_tracker(coins, b_client):
+    print("'price_handler' function started.")
+
     price_history = {}
  
     bsm = BinanceSocketManager(b_client)
