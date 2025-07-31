@@ -1,10 +1,7 @@
 import time
-import asyncio
-from binance import BinanceSocketManager
+from models.price_handler import price_handler
 
-from models.price_handler import price_tracker
-
-async def coin_handler(b_client):
+async def coin_handler(b_client, bsm):
     print("'coin_handler' function started.")
 
     try:
@@ -25,10 +22,10 @@ async def coin_handler(b_client):
                     f_coins.append(symbol)
             except Exception:
                 continue
+        
+        print(f"Coins filtered: {len(f_coins)}")
+
+        coins = set(f_coins)
+        await price_handler(coins, b_client, bsm)
     except Exception as e:
         print(f"Error filtering the coins. {e}")
-
-    print(f"Coins filtered: {len(f_coins)}")
-
-    coins = set(f_coins)
-    await price_tracker(coins, b_client)

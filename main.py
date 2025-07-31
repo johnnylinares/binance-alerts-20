@@ -2,7 +2,6 @@ import asyncio # For asynchronous operations
 import threading # HTTPS request for 24/7 uptime
 from contextlib import asynccontextmanager
 from flask import Flask, jsonify # For web server
-import telegram
 from telegram import Bot # For Telegram Bot API
 from binance import AsyncClient, BinanceSocketManager
 
@@ -21,7 +20,7 @@ async def binance_client():
             api_secret=API_SECRET
         )
 
-        print("Binance client & socket manager created successfully.")
+        print("Binance client created successfully.")
         yield client
     finally:
         if client:
@@ -32,8 +31,8 @@ async def binance_client():
 async def main():
     try:
         async with binance_client() as b_client:
-
-            await coin_handler(b_client)
+            bsm = BinanceSocketManager(b_client)
+            await coin_handler(b_client, bsm)
             
     except Exception as e:
         print(f"Error en main: {e}")
