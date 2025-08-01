@@ -8,7 +8,7 @@ from binance import AsyncClient, BinanceSocketManager
 # ===== MODULES =====
 from models.coin_handler import coin_handler
 from config.settings import (
-    API_KEY, API_SECRET, BOT_TOKEN
+    API_KEY, API_SECRET
 )
 
 @asynccontextmanager

@@ -26,6 +26,7 @@ async def coin_handler(b_client, bsm):
         print(f"Coins filtered: {len(f_coins)}")
 
         coins = set(f_coins)
-        await price_handler(coins, b_client, bsm)
+
+        await price_handler(bsm, b_client, coins)
     except Exception as e:
         print(f"Error filtering the coins. {e}")
