@@ -1,6 +1,5 @@
 # ===== LIBRARYS =====
 import asyncio
-import json
 import time
 from collections import defaultdict, deque
 
@@ -8,7 +7,7 @@ from collections import defaultdict, deque
 from models.alert_handler import send_alert
 
 # ===== CONSTANTS =====
-THRESHOLD = 0.1  # % alert's change
+THRESHOLD = 20.0  # % alert's change
 TIME_WINDOW = 2 * 60 * 60  # 2 hours in seconds
 MAX_BATCH_SIZE = 200  # Maximum symbols per stream (Binance limit)
 
