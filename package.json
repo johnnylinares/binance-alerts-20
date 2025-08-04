@@ -1,6 +1,0 @@
-{
-  "name": "alert-binance-telegram-bot",
-  "version": "1.0.0",
-  "description": "Bot de alertas de Binance para Telegram",
-  "main": "main.py"
-}
