@@ -6,6 +6,7 @@ __pycache__/
 
 venv/
 .env*
+.gitignore*
 
 *.sqlite3
 *.db
