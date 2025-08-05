@@ -8,52 +8,45 @@ from models.alert_handler import send_alert
 
 # ===== CONSTANTS =====
 THRESHOLD = 20.0  # % alert's change
-TIME_WINDOW = 3 * 60 * 60  # 3 hours in seconds (like your original 10800)
+TIME_WINDOW = 3 * 60 * 60  # 3 hours in seconds (10800 like original)
 MAX_BATCH_SIZE = 200  # Maximum symbols per stream (Binance limit)
 
 class PriceTracker:
     def __init__(self):
-        # Store price history for each symbol: [(timestamp, price), ...]
+        # Store price history for each symbol: [(timestamp, price), ...] - like original
         self.price_history = defaultdict(list)
-        # Store current prices and volumes
-        self.current_prices = {}
-        self.volumes = {}
         # Track last log time
         self.last_log_time = time.time()
-        self.log_interval = 600  # 10 minutes like your original
+        self.log_interval = 600  # 10 minutes like original
         
     def add_price_data(self, symbol, price, volume, timestamp):
-        """Add new price data and clean old data - following your original logic"""
-        # Store current data
-        self.current_prices[symbol] = price
-        self.volumes[symbol] = volume
-        
-        # Add to history
+        """Add new price data and clean old data - following original logic"""
+        # Add to history - like original
         self.price_history[symbol].append((timestamp, price))
         
-        # Clean old data (older than TIME_WINDOW) - exactly like your original
+        # Clean old data (older than TIME_WINDOW) - exactly like original
         self.price_history[symbol] = [
             p for p in self.price_history[symbol] 
             if timestamp - p[0] <= TIME_WINDOW
         ]
     
-    async def check_price_change(self, symbol):
-        """Check price change - following your exact original logic"""
-        # Need at least 2 data points - like your original
+    async def check_price_change(self, symbol, current_price, volume_24h):
+        """Check price change - following original logic exactly"""
+        # Need at least 2 data points - like original
         if len(self.price_history[symbol]) < 2:
-            return None
+            return
             
-        current_price = self.current_prices[symbol]
-        old_price = self.price_history[symbol][0][1]  # First (oldest) price
+        # Get old price (first/oldest in history) - like original
+        old_price = self.price_history[symbol][0][1]
         
-        # Calculate percentage change - exactly like your original
+        # Calculate percentage change - exactly like original
         percentage_change = ((current_price - old_price) / old_price) * 100
         
-        # Check if exceeds threshold - like your original
+        # Check if exceeds threshold - like original
         if abs(percentage_change) >= THRESHOLD:
             print(f"📊 COIN FOUND: {symbol}")
             
-            # Determine emojis - like your original
+            # Determine emojis - like original
             if percentage_change > 0:
                 emoji1 = "🟢"
                 emoji2 = "📈"
@@ -61,21 +54,14 @@ class PriceTracker:
                 emoji1 = "🔴"
                 emoji2 = "📉"
             
-            # Get volume in millions
-            volume_24h = round(self.volumes.get(symbol, 0) / 1_000_000, 1)
-            
-            # Send alert - like your original
+            # Send alert - like original
             await send_alert(symbol, percentage_change, current_price, emoji1, emoji2, volume_24h)
             
-            # Clear history after alert - exactly like your original
+            # Clear history after alert - exactly like original
             self.price_history[symbol] = []
-            
-            return True
-        
-        return False
     
     async def log_status(self):
-        """Log status periodically - like your original"""
+        """Log status periodically - like original"""
         now = time.time()
         if now - self.last_log_time >= self.log_interval:
             print("🔍 Checking coins")
@@ -93,18 +79,14 @@ async def process_ticker_data(data, tracker):
         if 's' in data and 'c' in data and 'q' in data:
             symbol = data['s']  # Symbol
             price = float(data['c'])  # Current price
-            volume = float(data['q'])  # Quote volume (24h)
+            volume_24h = round(float(data['q']) / 1_000_000, 1)  # Volume in millions like original
             timestamp = int(time.time())
             
-            # Only process USDT pairs - like your original
-            if not symbol.endswith("USDT"):
-                return
-            
             # Add data to tracker
-            tracker.add_price_data(symbol, price, volume, timestamp)
+            tracker.add_price_data(symbol, price, volume_24h, timestamp)
             
-            # Check for price changes - using your original logic
-            await tracker.check_price_change(symbol)
+            # Check for price changes - using original logic
+            await tracker.check_price_change(symbol, price, volume_24h)
             
             # Log status periodically
             await tracker.log_status()
@@ -135,7 +117,7 @@ async def handle_socket_stream(socket, tracker):
         await asyncio.sleep(5)
 
 async def price_handler(bsm, b_client, coins):
-    """Main price handler function - following your original structure"""
+    """Main price handler function - using original logic with WebSockets"""
     print("🤖 PRICE TRACKER ACTIVATED")
     print(f"🎯 Alert threshold: {THRESHOLD}%")
     print(f"⏰ Time window: {TIME_WINDOW/3600:.1f} hours")
