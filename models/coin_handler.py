@@ -8,8 +8,7 @@ async def coin_handler(b_client, bsm):
         exchange_info = await b_client.futures_exchange_info()
 
         l_coins = [
-            s['symbol'] for s in exchange_info['symbols'] if s['symbol'].endswith('USDT') and
-            (int(time.time() * 1000) - s.get('onboardDate', 0)) >= (90 * 24 * 60 * 60 * 1000)
+            s['symbol'] for s in exchange_info['symbols'] if s['symbol'].endswith('USDT')
         ]
 
         print(f"Coins listed: {len(l_coins)}")
