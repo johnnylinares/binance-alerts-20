@@ -1,199 +1,190 @@
-# 🚀 CryptoAlert Pro
+# 🪙 Binance Alerts 20%
 
-Un bot inteligente de Telegram que monitorea el mercado de criptomonedas en tiempo real y envía alertas automáticas cuando detecta movimientos significativos de precios.
+A bot that uses the Binance API to monitor futures coins and send automatic alerts when it detects significant movements of 20% or more.
 
-## 📊 Características
+## 📊 Features
 
-- **Monitoreo en Tiempo Real**: Rastrea precios de criptomonedas usando WebSockets de Binance
-- **Alertas Inteligentes**: Notifica automáticamente cuando hay cambios de precio ≥20% en ventanas de 2 horas
-- **Anti-Spam**: Sistema inteligente que evita alertas duplicadas
-- **Procesamiento por Lotes**: Maneja múltiples símbolos eficientemente respetando los límites de Binance
-- **Uptime 24/7**: Servidor web integrado para mantener el bot activo continuamente
-- **Integración con Google Sheets**: Almacena y gestiona datos de trading
+  - **Real-Time Monitoring**: Tracks cryptocurrency prices using Binance WebSockets
+  - **Smart Alerts**: Automatically notifies of price changes ≥20% within 3-hour windows
+  - **Anti-Spam**: System that prevents duplicate alerts
+  - **Batch Processing**: Efficiently handles multiple symbols while respecting Binance limits
+  - **24/7 Uptime**: Integrated web server to keep the bot active continuously
 
-## 🛠️ Tecnologías Utilizadas
+## 🛠️ Technologies Used
 
-- **Python 3.8+**
-- **Binance API**: Para datos de mercado en tiempo real
-- **Telegram Bot API**: Para envío de alertas
-- **Flask**: Servidor web para uptime
-- **AsyncIO**: Programación asíncrona para mejor rendimiento
-- **Google Sheets API**: Para almacenamiento de datos
+  - **Python 3.8+**
+  - **Binance API**: For real-time market data
+  - **Telegram Bot API**: For sending alerts
+  - **Flask**: Web server for uptime
+  - **AsyncIO**: Asynchronous programming for better performance
 
-## 📋 Requisitos Previos
+## 📋 Prerequisites
 
-1. **Cuenta de Binance** con API habilitada
-2. **Bot de Telegram** creado con @BotFather
-3. **Canal/Grupo de Telegram** para recibir alertas
-4. **Cuenta de Google** para Google Sheets (opcional)
+1.  **Binance account** with API enabled
+2.  **Telegram Bot** created with @BotFather
+3.  **Telegram Channel/Group** to receive alerts
+4.  **Google account** for Google Sheets (optional)
 
-## ⚙️ Configuración
+## ⚙️ Configuration
 
-### 1. Clona el repositorio
+### 1\. Clone the repository
+
 ```bash
-git clone https://github.com/tu-usuario/cryptoalert-pro.git
-cd cryptoalert-pro
+git clone https://github.com/johnnylinares/binance-alerts-20.git
+cd binance-alerts-20
 ```
 
-### 2. Instala las dependencias
+### 2\. Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configura las variables de entorno
+### 3\. Configure environment variables
 
-Crea un archivo `.env` en la raíz del proyecto:
+Create a `.env` file in the project's root:
 
 ```env
 # Binance API
-API_KEY=tu_binance_api_key
-API_SECRET=tu_binance_api_secret
+API_KEY="your_binance_api_key"
+API_SECRET="your_binance_api_secret"
 
-# Telegram Bot Principal
-BOT_TOKEN=tu_bot_token
-CHANNEL_ID=tu_channel_id
-
-# Telegram Bot de Logs (opcional)
-BOT_LOG_TOKEN=tu_log_bot_token
-CHANNEL_LOG_ID=tu_log_channel_id
-
-# Google Sheets (opcional)
-SHEET_ID=tu_google_sheet_id
-SHEET_CREDENTIAL=tu_google_credentials_json
+# Main Telegram Bot
+BOT_TOKEN="your_bot_token"
+CHANNEL_ID="your_channel_id"
 ```
 
-### 4. Obtener las credenciales necesarias
+### 4\. Get the necessary credentials
 
 #### Binance API:
-1. Ve a [Binance API Management](https://www.binance.com/en/my/settings/api-management)
-2. Crea una nueva API Key
-3. Habilita "Enable Reading" (no necesitas trading permissions)
-4. Guarda tu API Key y Secret Key
+
+1.  Go to [Binance API Management](https://www.binance.com/en/my/settings/api-management)
+2.  Create a new API Key
+3.  Enable "Enable Reading" (you don't need trading permissions)
+4.  Save your API Key and Secret Key
 
 #### Telegram Bot:
-1. Habla con [@BotFather](https://t.me/botfather) en Telegram
-2. Usa `/newbot` para crear un nuevo bot
-3. Guarda el token que te proporciona
-4. Añade el bot a tu canal/grupo y hazlo administrador
-5. Obtén el ID del canal usando [@userinfobot](https://t.me/userinfobot)
 
-## 🚀 Uso
+1.  Talk to [@BotFather](https://t.me/botfather) on Telegram
+2.  Use `/newbot` to create a new bot
+3.  Save the token it provides
+4.  Add the bot to your channel/group and make it an administrator
+5.  Get the channel ID using [@userinfobot](https://t.me/userinfobot)
 
-### Ejecutar localmente
-```bash
-python main.py
-```
+## 🚀 Usage
 
-### Ejecutar en producción
-El bot incluye un servidor Flask que responde en el puerto 8000 para mantener el uptime:
+### Run locally
 
 ```bash
 python main.py
 ```
 
-El servidor estará disponible en `http://localhost:8000`
+### Run in production
 
-## 📊 Funcionamiento
+The bot includes a Flask server that responds on port 8000 to maintain uptime:
 
-1. **Conexión**: El bot se conecta a la API de Binance usando WebSockets
-2. **Monitoreo**: Rastrea precios de múltiples criptomonedas en tiempo real
-3. **Análisis**: Calcula cambios porcentuales en ventanas de 2 horas
-4. **Alertas**: Envía notificaciones cuando detecta cambios ≥20%
-5. **Filtrado**: Evita spam con sistema de buckets de tiempo
+```bash
+python main.py
+```
 
-## 📱 Formato de Alertas
+The server will be available at `http://localhost:8000`
+
+## 📊 How it Works
+
+1.  **Connection**: The bot connects to the Binance API using WebSockets
+2.  **Monitoring**: It tracks prices of multiple cryptocurrencies in real time
+3.  **Analysis**: It calculates percentage changes in 2-hour windows
+4.  **Alerts**: It sends notifications when it detects changes ≥20%
+5.  **Filtering**: It prevents spam with a time bucket system
+
+## 📱 Alert Format
 
 ```
 🟢 #BTCUSDT 📈 +25.67%
 💵 $45,230.50 💰 $1,234.56M
 ```
 
-- 🟢📈 = Subida de precio
-- 🔴📉 = Bajada de precio
-- Símbolo de la criptomoneda
-- Porcentaje de cambio
-- Precio actual
-- Volumen en millones
+  - 🟢📈 = Price increase
+  - 🔴📉 = Price decrease
+  - Cryptocurrency symbol
+  - Percentage change
+  - Current price
+  - Volume in millions
 
-## ⚡ Configuración Avanzada
+## ⚡ Advanced Configuration
 
-### Modificar el umbral de alerta
-En `price_handler.py`, cambia la constante:
+### Modify the alert threshold
+
+In `price_handler.py`, change the constant:
+
 ```python
-THRESHOLD = 20.0  # Cambiar a tu porcentaje deseado
+THRESHOLD = 20.0  # Change to your desired percentage
 ```
 
-### Modificar la ventana de tiempo
+### Modify the time window
+
 ```python
-TIME_WINDOW = 2 * 60 * 60  # 2 horas en segundos
+TIME_WINDOW = 2 * 60 * 60  # 2 hours in seconds
 ```
 
-### Añadir más símbolos
-Modifica la función `coin_handler` en `models/coin_handler.py`
+### Add more symbols
 
-## 🔧 Estructura del Proyecto
+Modify the `coin_handler` function in `models/coin_handler.py`
+
+## 🔧 Project Structure
 
 ```
-cryptoalert-pro/
-├── main.py                 # Punto de entrada principal
+binance-alerts-20/
+├── main.py                 # Main entry point
 ├── config/
-│   └── settings.py         # Configuración y variables de entorno
+│   └── settings.py         # Configuration and environment variables
 ├── models/
-│   ├── alert_handler.py    # Manejo de alertas de Telegram
-│   ├── price_handler.py    # Lógica de monitoreo de precios
-│   └── coin_handler.py     # Gestión de símbolos de criptomonedas
-├── requirements.txt        # Dependencias de Python
-├── .env                   # Variables de entorno (no incluir en git)
-└── README.md              # Este archivo
+│   ├── alert_handler.py    # Telegram alert handling
+│   ├── coin_handler.py     # Price monitoring logic
+│   └── price_handler.py    # Cryptocurrency symbol management
+├── requirements.txt        # Python dependencies
+├── .env                    # Environment variables (do not include in git)
+└── README.md               # This file
 ```
 
-## 🐛 Solución de Problemas
+## 🐛 Troubleshooting
 
-### Error de conexión a Binance
-- Verifica que tu API Key y Secret sean correctos
-- Asegúrate de que la API Key tenga permisos de lectura habilitados
-- Revisa que no hayas excedido los límites de rate de Binance
+### Connection error to Binance
 
-### Bot no envía mensajes
-- Confirma que el bot sea administrador del canal
-- Verifica que el CHANNEL_ID sea correcto (debe incluir el `-` para canales)
-- Revisa que el BOT_TOKEN sea válido
+  - Verify that your API Key and Secret are correct
+  - Make sure the API Key has reading permissions enabled
+  - Check that you haven't exceeded Binance's rate limits
 
-### Problemas de rendimiento
-- El bot maneja automáticamente múltiples símbolos en lotes
-- Si experimentas lag, reduce el número de símbolos monitoreados
+### Bot doesn't send messages
 
-## 📈 Próximas Características
+  - Confirm that the bot is an administrator of the channel
+  - Verify that the CHANNEL\_ID is correct (it must include the `-` for channels)
+  - Check that the BOT\_TOKEN is valid
 
-- [ ] Dashboard web para visualización de datos
-- [ ] Alertas personalizables por usuario
-- [ ] Soporte para más exchanges
-- [ ] Análisis técnico avanzado
-- [ ] Backtesting de estrategias
-- [ ] Notificaciones por email
+### Performance issues
 
-## 🤝 Contribuir
+  - The bot automatically handles multiple symbols in batches
+  - If you experience lag, reduce the number of monitored symbols
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+## 🤝 Contribute
 
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+1.  Fork the project
+2.  Create a branch for your feature (`git checkout -b feature/AmazingFeature`)
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
 
 ## ⚠️ Disclaimer
 
-Este bot es solo para fines educativos e informativos. No constituye asesoramiento financiero. Siempre haz tu propia investigación antes de tomar decisiones de inversión.
+This bot is for educational and informational purposes only. It does not constitute financial advice. Always do your own research before making investment decisions.
 
-## 📞 Soporte
+## 📞 Support
 
-Si tienes problemas o preguntas:
-- Abre un [Issue](https://github.com/tu-usuario/cryptoalert-pro/issues)
-- Contacta al desarrollador: [tu-email@ejemplo.com]
+If you have problems or questions:
 
----
+  - Open an [Issue](https://github.com/johnnylinares/binance-alerts-20/issues)
+  - Contact the developer: [johnnylinares261@gmail.com]
 
-⭐ Si este proyecto te resulta útil, ¡no olvides darle una estrella!
+-----
+
+⭐ If this project is useful to you, don't forget to give it a star\!
