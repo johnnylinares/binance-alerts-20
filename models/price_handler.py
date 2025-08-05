@@ -21,10 +21,22 @@ class PriceTracker:
         self.volumes = {}
         # Track processed alerts to avoid spam
         self.processed_alerts = set()
+        # Store initial prices for comparison
+        self.initial_prices = {}
+        # Track when we started monitoring each symbol
+        self.start_times = {}
+        # Add counter for debugging
+        self.price_updates = defaultdict(int)
         
     def add_price_data(self, symbol, price, volume, timestamp):
         """Add new price data and clean old data"""
-        current_time = timestamp
+        self.price_updates[symbol] += 1
+        
+        # Store initial price and start time if this is the first data point
+        if symbol not in self.initial_prices:
+            self.initial_prices[symbol] = price
+            self.start_times[symbol] = timestamp
+            print(f"🎯 Started monitoring {symbol} at ${price}")
         
         # Add new data
         self.price_history[symbol].append((timestamp, price))
@@ -32,36 +44,46 @@ class PriceTracker:
         self.volumes[symbol] = volume
         
         # Clean old data (older than TIME_WINDOW)
-        cutoff_time = current_time - TIME_WINDOW
+        cutoff_time = timestamp - TIME_WINDOW
         while (self.price_history[symbol] and 
                self.price_history[symbol][0][0] < cutoff_time):
             self.price_history[symbol].popleft()
+            
+        # Debug logging every 100 updates for some symbols
+        if self.price_updates[symbol] % 100 == 0 and symbol.endswith('BTC'):
+            print(f"📈 {symbol}: {self.price_updates[symbol]} updates, current: ${price}, history length: {len(self.price_history[symbol])}")
     
     def check_price_change(self, symbol):
         """Check if price changed more than threshold in the time window"""
         if len(self.price_history[symbol]) < 2:
             return None
             
+        current_time = int(time.time())
         current_price = self.current_prices[symbol]
         
-        # Get the oldest price in our time window
+        # Get oldest price in the time window
         oldest_price = self.price_history[symbol][0][1]
-        
-        # Calculate percentage change
         percentage_change = ((current_price - oldest_price) / oldest_price) * 100
+        
+        # Debug logging for threshold analysis
+        if abs(percentage_change) >= 5.0:  # Log significant changes for debugging
+            print(f"📊 {symbol}: {percentage_change:+.2f}% change (Current: ${current_price}, Oldest: ${oldest_price}, Threshold: {THRESHOLD}%)")
         
         # Check if it exceeds threshold
         if abs(percentage_change) >= THRESHOLD:
-            alert_key = f"{symbol}_{int(time.time() // 300)}"  # 5-minute buckets to avoid spam
+            print(f"🚨 {symbol}: {percentage_change:+.2f}% change detected (threshold: {THRESHOLD}%)")
+            
+            # Use 30-minute buckets instead of 5-minute to avoid missing alerts
+            alert_key = f"{symbol}_{int(current_time // 1800)}"  # 30-minute buckets
             
             if alert_key not in self.processed_alerts:
                 self.processed_alerts.add(alert_key)
                 
-                # Clean old processed alerts (keep only last hour)
-                current_bucket = int(time.time() // 300)
+                # Clean old processed alerts (keep only last 4 hours)
+                current_bucket = int(current_time // 1800)
                 self.processed_alerts = {
                     key for key in self.processed_alerts 
-                    if int(key.split('_')[1]) > current_bucket - 12
+                    if int(key.split('_')[1]) > current_bucket - 8  # 8 * 30min = 4 hours
                 }
                 
                 return {
@@ -70,6 +92,8 @@ class PriceTracker:
                     'price': current_price,
                     'volume': round(self.volumes.get(symbol, 0) / 1_000_000, 2)  # Convert to millions
                 }
+            else:
+                print(f"⏭️ {symbol}: Alert already sent in this 30-min window")
         
         return None
 
@@ -99,6 +123,8 @@ async def process_ticker_data(data, tracker):
             alert_data = tracker.check_price_change(symbol)
             
             if alert_data:
+                print(f"📤 Sending alert for {alert_data['symbol']}: {alert_data['percentage_change']:+.2f}%")
+                
                 # Determine emoji based on price change
                 emoji = "🟢📈💵💰" if alert_data['percentage_change'] > 0 else "🔴📉💵💰" 
                 
@@ -141,7 +167,10 @@ async def handle_socket_stream(socket, tracker):
 
 async def price_handler(bsm, b_client, coins):
     """Main price handler function"""
-    print(f"Starting price tracking for {len(coins)} coins...")
+    print(f"🚀 Starting price tracking for {len(coins)} coins")
+    print(f"🎯 Alert threshold: {THRESHOLD}%")
+    print(f"⏰ Time window: {TIME_WINDOW/3600:.1f} hours")
+    print(f"📦 Max batch size: {MAX_BATCH_SIZE}")
     
     # Initialize price tracker
     tracker = PriceTracker()
@@ -155,12 +184,12 @@ async def price_handler(bsm, b_client, coins):
         batch = coins_list[i:i + MAX_BATCH_SIZE]
         batches.append(batch)
     
-    print(f"Created {len(batches)} batches for processing")
+    print(f"📦 Created {len(batches)} batches for processing")
     
     # Create tasks for each batch
     tasks = []
     for i, batch in enumerate(batches):
-        print(f"Starting batch {i+1}/{len(batches)} with {len(batch)} symbols")
+        print(f"🔄 Starting batch {i+1}/{len(batches)} with {len(batch)} symbols")
         
         try:
             # Create multiplex stream for this batch
@@ -181,20 +210,25 @@ async def price_handler(bsm, b_client, coins):
             continue
     
     if not tasks:
-        print("No streams created successfully")
+        print("❌ No streams created successfully")
         return
     
-    print(f"Successfully created {len(tasks)} streams. Starting price monitoring...")
+    print(f"✅ Successfully created {len(tasks)} streams")
+    print(f"🔍 Monitoring for changes >= {THRESHOLD}%")
+    print(f"📊 Will show debug info for changes >= 5%")
+    print(f"🚨 Alert buckets: 30-minute windows")
+    print("=" * 50)
+    print("🟢 Bot is now actively monitoring...")
     
     try:
         # Run all streams concurrently
         await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:
-        print(f"Error in price handler: {e}")
+        print(f"❌ Error in price handler: {e}")
     finally:
         # Cancel any remaining tasks
         for task in tasks:
             if not task.done():
                 task.cancel()
         
-        print("Price handler stopped")
+        print("🛑 Price handler stopped")
