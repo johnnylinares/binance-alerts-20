@@ -25,16 +25,18 @@ class PriceTracker:
         self.initial_prices = {}
         # Track when we started monitoring each symbol
         self.start_times = {}
+        # Add counter for debugging
+        self.price_updates = defaultdict(int)
         
     def add_price_data(self, symbol, price, volume, timestamp):
         """Add new price data and clean old data"""
-        current_time = timestamp
+        self.price_updates[symbol] += 1
         
         # Store initial price and start time if this is the first data point
         if symbol not in self.initial_prices:
             self.initial_prices[symbol] = price
             self.start_times[symbol] = timestamp
-            print(f"Started monitoring {symbol} at ${price}")
+            print(f"🎯 Started monitoring {symbol} at ${price}")
         
         # Add new data
         self.price_history[symbol].append((timestamp, price))
@@ -42,57 +44,46 @@ class PriceTracker:
         self.volumes[symbol] = volume
         
         # Clean old data (older than TIME_WINDOW)
-        cutoff_time = current_time - TIME_WINDOW
+        cutoff_time = timestamp - TIME_WINDOW
         while (self.price_history[symbol] and 
                self.price_history[symbol][0][0] < cutoff_time):
             self.price_history[symbol].popleft()
+            
+        # Debug logging every 100 updates for some symbols
+        if self.price_updates[symbol] % 100 == 0 and symbol.endswith('BTC'):
+            print(f"📈 {symbol}: {self.price_updates[symbol]} updates, current: ${price}, history length: {len(self.price_history[symbol])}")
     
     def check_price_change(self, symbol):
         """Check if price changed more than threshold in the time window"""
         if len(self.price_history[symbol]) < 2:
             return None
             
+        current_time = int(time.time())
         current_price = self.current_prices[symbol]
         
-            oldest_price = self.price_history[symbol][0][1]
-            percentage_change_history = ((current_price - oldest_price) / oldest_price) * 100
+        # Get oldest price in the time window
+        oldest_price = self.price_history[symbol][0][1]
+        percentage_change = ((current_price - oldest_price) / oldest_price) * 100
         
-        # Method 2: Compare with initial price if we've been monitoring long enough
-        percentage_change_initial = None
-        if (symbol in self.initial_prices and 
-            current_time - self.start_times[symbol] >= 300):  # At least 5 minutes of monitoring
-            initial_price = self.initial_prices[symbol]
-            percentage_change_initial = ((current_price - initial_price) / initial_price) * 100
-        
-        # Use the larger absolute change for detection
-        percentage_change = None
-        if percentage_change_history is not None and percentage_change_initial is not None:
-            if abs(percentage_change_history) >= abs(percentage_change_initial):
-                percentage_change = percentage_change_history
-            else:
-                percentage_change = percentage_change_initial
-        elif percentage_change_history is not None:
-            percentage_change = percentage_change_history
-        elif percentage_change_initial is not None:
-            percentage_change = percentage_change_initial
-        
-        if percentage_change is None:
-            return None
+        # Debug logging for threshold analysis
+        if abs(percentage_change) >= 5.0:  # Log significant changes for debugging
+            print(f"📊 {symbol}: {percentage_change:+.2f}% change (Current: ${current_price}, Oldest: ${oldest_price}, Threshold: {THRESHOLD}%)")
         
         # Check if it exceeds threshold
         if abs(percentage_change) >= THRESHOLD:
             print(f"🚨 {symbol}: {percentage_change:+.2f}% change detected (threshold: {THRESHOLD}%)")
             
-            alert_key = f"{symbol}_{int(time.time() // 300)}"  # 5-minute buckets to avoid spam
+            # Use 30-minute buckets instead of 5-minute to avoid missing alerts
+            alert_key = f"{symbol}_{int(current_time // 1800)}"  # 30-minute buckets
             
             if alert_key not in self.processed_alerts:
                 self.processed_alerts.add(alert_key)
                 
-                # Clean old processed alerts (keep only last hour)
-                current_bucket = int(time.time() // 300)
+                # Clean old processed alerts (keep only last 4 hours)
+                current_bucket = int(current_time // 1800)
                 self.processed_alerts = {
                     key for key in self.processed_alerts 
-                    if int(key.split('_')[1]) > current_bucket - 12
+                    if int(key.split('_')[1]) > current_bucket - 8  # 8 * 30min = 4 hours
                 }
                 
                 return {
@@ -102,7 +93,7 @@ class PriceTracker:
                     'volume': round(self.volumes.get(symbol, 0) / 1_000_000, 2)  # Convert to millions
                 }
             else:
-                print(f"⏭️ {symbol}: Alert already sent recently for this time bucket")
+                print(f"⏭️ {symbol}: Alert already sent in this 30-min window")
         
         return None
 
@@ -176,7 +167,10 @@ async def handle_socket_stream(socket, tracker):
 
 async def price_handler(bsm, b_client, coins):
     """Main price handler function"""
-    print(f"🚀 Starting price tracking for {len(coins)} coins with {THRESHOLD}% threshold...")
+    print(f"🚀 Starting price tracking for {len(coins)} coins")
+    print(f"🎯 Alert threshold: {THRESHOLD}%")
+    print(f"⏰ Time window: {TIME_WINDOW/3600:.1f} hours")
+    print(f"📦 Max batch size: {MAX_BATCH_SIZE}")
     
     # Initialize price tracker
     tracker = PriceTracker()
@@ -219,8 +213,12 @@ async def price_handler(bsm, b_client, coins):
         print("❌ No streams created successfully")
         return
     
-    print(f"✅ Successfully created {len(tasks)} streams. Starting price monitoring...")
-    print(f"🎯 Monitoring for changes >= {THRESHOLD}% in {TIME_WINDOW/3600:.1f} hour windows")
+    print(f"✅ Successfully created {len(tasks)} streams")
+    print(f"🔍 Monitoring for changes >= {THRESHOLD}%")
+    print(f"📊 Will show debug info for changes >= 5%")
+    print(f"🚨 Alert buckets: 30-minute windows")
+    print("=" * 50)
+    print("🟢 Bot is now actively monitoring...")
     
     try:
         # Run all streams concurrently
