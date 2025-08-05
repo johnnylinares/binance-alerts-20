@@ -21,10 +21,20 @@ class PriceTracker:
         self.volumes = {}
         # Track processed alerts to avoid spam
         self.processed_alerts = set()
+        # Store initial prices for comparison
+        self.initial_prices = {}
+        # Track when we started monitoring each symbol
+        self.start_times = {}
         
     def add_price_data(self, symbol, price, volume, timestamp):
         """Add new price data and clean old data"""
         current_time = timestamp
+        
+        # Store initial price and start time if this is the first data point
+        if symbol not in self.initial_prices:
+            self.initial_prices[symbol] = price
+            self.start_times[symbol] = timestamp
+            print(f"Started monitoring {symbol} at ${price}")
         
         # Add new data
         self.price_history[symbol].append((timestamp, price))
@@ -44,14 +54,35 @@ class PriceTracker:
             
         current_price = self.current_prices[symbol]
         
-        # Get the oldest price in our time window
-        oldest_price = self.price_history[symbol][0][1]
+            oldest_price = self.price_history[symbol][0][1]
+            percentage_change_history = ((current_price - oldest_price) / oldest_price) * 100
         
-        # Calculate percentage change
-        percentage_change = ((current_price - oldest_price) / oldest_price) * 100
+        # Method 2: Compare with initial price if we've been monitoring long enough
+        percentage_change_initial = None
+        if (symbol in self.initial_prices and 
+            current_time - self.start_times[symbol] >= 300):  # At least 5 minutes of monitoring
+            initial_price = self.initial_prices[symbol]
+            percentage_change_initial = ((current_price - initial_price) / initial_price) * 100
+        
+        # Use the larger absolute change for detection
+        percentage_change = None
+        if percentage_change_history is not None and percentage_change_initial is not None:
+            if abs(percentage_change_history) >= abs(percentage_change_initial):
+                percentage_change = percentage_change_history
+            else:
+                percentage_change = percentage_change_initial
+        elif percentage_change_history is not None:
+            percentage_change = percentage_change_history
+        elif percentage_change_initial is not None:
+            percentage_change = percentage_change_initial
+        
+        if percentage_change is None:
+            return None
         
         # Check if it exceeds threshold
         if abs(percentage_change) >= THRESHOLD:
+            print(f"🚨 {symbol}: {percentage_change:+.2f}% change detected (threshold: {THRESHOLD}%)")
+            
             alert_key = f"{symbol}_{int(time.time() // 300)}"  # 5-minute buckets to avoid spam
             
             if alert_key not in self.processed_alerts:
@@ -70,6 +101,8 @@ class PriceTracker:
                     'price': current_price,
                     'volume': round(self.volumes.get(symbol, 0) / 1_000_000, 2)  # Convert to millions
                 }
+            else:
+                print(f"⏭️ {symbol}: Alert already sent recently for this time bucket")
         
         return None
 
@@ -99,6 +132,8 @@ async def process_ticker_data(data, tracker):
             alert_data = tracker.check_price_change(symbol)
             
             if alert_data:
+                print(f"📤 Sending alert for {alert_data['symbol']}: {alert_data['percentage_change']:+.2f}%")
+                
                 # Determine emoji based on price change
                 emoji = "🟢📈💵💰" if alert_data['percentage_change'] > 0 else "🔴📉💵💰" 
                 
@@ -141,7 +176,7 @@ async def handle_socket_stream(socket, tracker):
 
 async def price_handler(bsm, b_client, coins):
     """Main price handler function"""
-    print(f"Starting price tracking for {len(coins)} coins...")
+    print(f"🚀 Starting price tracking for {len(coins)} coins with {THRESHOLD}% threshold...")
     
     # Initialize price tracker
     tracker = PriceTracker()
@@ -155,12 +190,12 @@ async def price_handler(bsm, b_client, coins):
         batch = coins_list[i:i + MAX_BATCH_SIZE]
         batches.append(batch)
     
-    print(f"Created {len(batches)} batches for processing")
+    print(f"📦 Created {len(batches)} batches for processing")
     
     # Create tasks for each batch
     tasks = []
     for i, batch in enumerate(batches):
-        print(f"Starting batch {i+1}/{len(batches)} with {len(batch)} symbols")
+        print(f"🔄 Starting batch {i+1}/{len(batches)} with {len(batch)} symbols")
         
         try:
             # Create multiplex stream for this batch
@@ -181,20 +216,21 @@ async def price_handler(bsm, b_client, coins):
             continue
     
     if not tasks:
-        print("No streams created successfully")
+        print("❌ No streams created successfully")
         return
     
-    print(f"Successfully created {len(tasks)} streams. Starting price monitoring...")
+    print(f"✅ Successfully created {len(tasks)} streams. Starting price monitoring...")
+    print(f"🎯 Monitoring for changes >= {THRESHOLD}% in {TIME_WINDOW/3600:.1f} hour windows")
     
     try:
         # Run all streams concurrently
         await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:
-        print(f"Error in price handler: {e}")
+        print(f"❌ Error in price handler: {e}")
     finally:
         # Cancel any remaining tasks
         for task in tasks:
             if not task.done():
                 task.cancel()
         
-        print("Price handler stopped")
+        print("🛑 Price handler stopped")
