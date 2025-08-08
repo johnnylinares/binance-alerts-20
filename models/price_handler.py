@@ -26,9 +26,9 @@ class PriceTracker:
             if timestamp - p[0] <= TIME_WINDOW
         ]
     
-    async def check_price_change(self, symbol, current_price, volume_24h):
+    async def check_price_change(self, symbol, current_price, volume_24h, bsm, b_client):
         """
-        Check price change - following original logic exactly
+        Check price change.
         """
         
         if len(self.price_history[symbol]) < 2:
@@ -48,7 +48,7 @@ class PriceTracker:
                 emoji1 = "🔴"
                 emoji2 = "📉"
             
-            await send_alert(symbol, percentage_change, current_price, emoji1, emoji2, volume_24h)
+            await send_alert(symbol, percentage_change, current_price, emoji1, emoji2, volume_24h, bsm, b_client)
             self.price_history[symbol] = []
     
     async def log_status(self):
@@ -65,30 +65,32 @@ async def create_multiplex_stream(bsm, symbols):
     """
     Create a multiplex stream for multiple symbols.
     """
+
     streams = [f"{symbol.lower()}@ticker" for symbol in symbols]
     multiplex_socket = bsm.multiplex_socket(streams)
     return multiplex_socket
 
-async def process_ticker_data(data, tracker):
+async def process_ticker_data(data, tracker, bsm, b_client):
     """
     Process ticker data from WebSocket.
     """
+
     try:
         if 's' in data and 'c' in data and 'q' in data:
             symbol = data['s']
-            price = float(data['c'])
+            price = data['c']
             volume_24h = round(float(data['q']) / 1_000_000, 1)
             timestamp = int(time.time())
             
             tracker.add_price_data(symbol, price, volume_24h, timestamp)
             
-            await tracker.check_price_change(symbol, price, volume_24h)
+            await tracker.check_price_change(symbol, price, volume_24h, bsm, b_client)
             await tracker.log_status()
                 
     except Exception as e:
         print(f"Error processing ticker data: {e}")
 
-async def handle_socket_stream(socket, tracker):
+async def handle_socket_stream(socket, tracker, bsm, b_client):
     """
     Handle WebSocket stream messages.
     """
@@ -102,7 +104,7 @@ async def handle_socket_stream(socket, tracker):
                         if 'stream' in msg and 'data' in msg:
                             await process_ticker_data(msg['data'], tracker)
                         else:
-                            await process_ticker_data(msg, tracker)
+                            await process_ticker_data(msg, tracker, bsm, b_client)
                             
                 except Exception as msg_error:
                     print(f"Error processing message: {msg_error}")
@@ -112,7 +114,7 @@ async def handle_socket_stream(socket, tracker):
         print(f"Error in socket stream: {e}")
         await asyncio.sleep(5)
 
-async def price_handler(bsm, coins):
+async def price_handler(bsm, coins, b_client):
     """
     Main price handler function.
     """
@@ -140,7 +142,7 @@ async def price_handler(bsm, coins):
             socket = await create_multiplex_stream(bsm, batch)
         
             task = asyncio.create_task(
-                handle_socket_stream(socket, tracker),
+                handle_socket_stream(socket, tracker, bsm, b_client),
                 name=f"batch_{i+1}"
             )
             tasks.append(task)
