@@ -102,7 +102,7 @@ async def handle_socket_stream(socket, tracker, bsm, b_client):
                     msg = await stream.recv()
                     if msg:
                         if 'stream' in msg and 'data' in msg:
-                            await process_ticker_data(msg['data'], tracker)
+                            await process_ticker_data(msg['data'], tracker, bsm, b_client)
                         else:
                             await process_ticker_data(msg, tracker, bsm, b_client)
                             
