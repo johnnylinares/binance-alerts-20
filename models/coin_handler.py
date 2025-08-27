@@ -30,4 +30,4 @@ async def coin_handler(client):
         await price_handler(client, coins)
 
     except Exception as e:
-        log(f"Error filtering the coins. {e}")
+        await log(f"Error filtering the coins. {e}")
