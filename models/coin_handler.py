@@ -13,7 +13,7 @@ async def coin_handler(client):
             s['symbol'] for s in exchange_info['symbols'] if s['symbol'].endswith('USDT')
         ]
 
-        await log(f"Coins listed: {l_coins}")
+        await log(f"Coins listed: {len(l_coins)}")
 
         f_coins = []
         for symbol in l_coins:
