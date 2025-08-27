@@ -1,8 +1,8 @@
 import time
 import asyncio
 from binance import BinanceSocketManager
-from log_handler import log
-from alert_handler import alert_handler
+from models.log_handler import log
+from models.alert_handler import alert_handler
 
 async def price_handler(client, coins):
     """
