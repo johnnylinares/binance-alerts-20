@@ -26,11 +26,22 @@ async def price_handler(client, coins):
         nonlocal last_log_time
         
         try:
-            ticker_data = msg['data']
+            # Añadimos esta verificación para asegurarnos de que el mensaje
+            # tenga la clave 'data' antes de procesarlo.
+            if 'data' in msg and isinstance(msg['data'], dict):
+                ticker_data = msg['data']
+            else:
+                # Si el mensaje no tiene el formato esperado, lo ignoramos y lo registramos.
+                await log(f"[DEBUG] Mensaje de control o inesperado recibido: {msg}")
+                return
             
+            # Ahora el código es más simple, ya que 'ticker_data' siempre es un diccionario.
             if ticker_data['e'] == '24hrTicker':
                 symbol = ticker_data['s']
                 
+                # Solo procesamos si el símbolo está en nuestra lista de interés.
+                # Nota: Aunque ya nos suscribimos solo a estas monedas,
+                # esta es una buena práctica de seguridad.
                 if symbol in coins:
                     price = float(ticker_data['c'])
                     volume = round(float(ticker_data['v']) / 1000000, 1)
@@ -70,6 +81,9 @@ async def price_handler(client, coins):
         except Exception as e:
             await log(f"[ERROR] Error procesando mensaje: {e}")
             
+    # --- CAMBIO CRÍTICO: Usar multiplex_socket para las monedas específicas ---
+    # Convertimos los símbolos de la lista 'coins' a minúsculas y agregamos '@ticker'
+    # para crear los nombres de los streams del websocket.
     streams = [f"{coin.lower()}@ticker" for coin in coins]
     ts = bm.multiplex_socket(streams)
     
