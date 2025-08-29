@@ -4,106 +4,84 @@ from binance import BinanceSocketManager
 from models.log_handler import log
 from models.alert_handler import alert_handler
 
-async def price_handler(client, coins):
-    """
-    Maneja el monitoreo de precios usando websockets para detectar movimientos del 20%
-    Solo se suscribe a las monedas proporcionadas en la lista 'coins'.
-    """
-    
-    await log("🤖 PRICE TRACKER ACTIVATED")
+THRESHOLD = 20
+TIME_WINDOW = 2 * 60 * 60 + 10 * 60
+LOG_INTERVAL = 600
+GROUP_SIZE = 50
 
-    price_history = {}
-    threshold = 20
-    time_window = 2 * 60 * 60 + 10 * 60
-    log_interval = 600
-
-    last_log_time = time.time()
-    
+async def handle_websocket_group(client, coins_group, price_history, log_timestamp):
     bm = BinanceSocketManager(client)
     
-    async def handle_socket_message(msg):
-        """Procesa cada mensaje del websocket."""
-        nonlocal last_log_time
-        
-        try:
-            # Añadimos esta verificación para asegurarnos de que el mensaje
-            # tenga la clave 'data' antes de procesarlo.
-            if 'data' in msg and isinstance(msg['data'], dict):
-                ticker_data = msg['data']
-            else:
-                # Si el mensaje no tiene el formato esperado, lo ignoramos y lo registramos.
-                await log(f"[DEBUG] Mensaje de control o inesperado recibido: {msg}")
-                return
-            
-            # Ahora el código es más simple, ya que 'ticker_data' siempre es un diccionario.
-            if ticker_data['e'] == '24hrTicker':
-                symbol = ticker_data['s']
-                
-                # Solo procesamos si el símbolo está en nuestra lista de interés.
-                # Nota: Aunque ya nos suscribimos solo a estas monedas,
-                # esta es una buena práctica de seguridad.
-                if symbol in coins:
-                    price = float(ticker_data['c'])
-                    volume = round(float(ticker_data['v']) / 1000000, 1)
-                    now = time.time()
-                    
-                    if symbol not in price_history:
-                        price_history[symbol] = []
-                    
-                    price_history[symbol].append((now, price))
-                    
-                    price_history[symbol] = [
-                        p for p in price_history[symbol] 
-                        if now - p[0] <= time_window
-                    ]
-                    
-                    if len(price_history[symbol]) >= 2:
-                        old_price = price_history[symbol][0][1]
-                        percentage_change = ((price - old_price) / old_price) * 100
-                    
-                        if abs(percentage_change) >= threshold:
-                            await log(f"📊 COIN FOUND: {symbol}")
-                            
-                            if percentage_change > 0:
-                                emoji = "🟢📈"
-                            else:
-                                emoji = "🔴📉"
-
-                            await alert_handler(symbol, percentage_change, price, emoji, volume)
-                            
-                            price_history[symbol] = []
-                    
-                    current_time = time.time()
-                    if current_time - last_log_time >= log_interval:
-                        await log("🔍 Checking coins")
-                        last_log_time = current_time
-                        
-        except Exception as e:
-            await log(f"[ERROR] Error procesando mensaje: {e}")
-            
-    # --- CAMBIO CRÍTICO: Usar multiplex_socket para las monedas específicas ---
-    # Convertimos los símbolos de la lista 'coins' a minúsculas y agregamos '@ticker'
-    # para crear los nombres de los streams del websocket.
-    streams = [f"{coin.lower()}@ticker" for coin in coins]
+    streams = [f"{coin.lower()}@ticker" for coin in coins_group]
     ts = bm.multiplex_socket(streams)
-    
+
     try:
-        await log(f"Conectando a websocket para monitorear {len(coins)} monedas...")
+        await log(f"Creando websocket para {len(coins_group)} monedas.")
         
         async with ts as tscm:
             while True:
-                try:
-                    msg = await tscm.recv()
-                    await handle_socket_message(msg)
+                msg = await tscm.recv()
+                
+                if 'data' in msg and isinstance(msg['data'], dict):
+                    ticker_data = msg['data']
                     
-                except Exception as e:
-                    await log(f"[ERROR] Error en websocket: {e}")
-                    await asyncio.sleep(10)
-                    break
-                    
+                    if ticker_data.get('e') == '24hrTicker':
+                        symbol = ticker_data.get('s')
+                        
+                        if symbol in price_history:
+                            price = float(ticker_data['c'])
+                            volume = round(float(ticker_data['v']) / 1000000, 1)
+                            now = time.time()
+                            
+                            price_history[symbol].append((now, price))
+                            
+                            price_history[symbol] = [
+                                p for p in price_history[symbol] 
+                                if now - p[0] <= TIME_WINDOW
+                            ]
+                            
+                            if len(price_history[symbol]) >= 2:
+                                old_price = price_history[symbol][0][1]
+                                percentage_change = ((price - old_price) / old_price) * 100
+                                
+                                if abs(percentage_change) >= THRESHOLD:
+                                    await log(f"📊 Moneda encontrada: {symbol}")
+                                    
+                                    if percentage_change > 0:
+                                        emoji = "🟢📈"
+                                    else:
+                                        emoji = "🔴📉"
+
+                                    await alert_handler(symbol, percentage_change, price, emoji, volume)
+                                    
+                                    price_history[symbol] = []
+                else:
+                    await log(f"[DEBUG] Mensaje inesperado recibido: {msg}")
+                
+                current_time = time.time()
+                if current_time - log_timestamp['last_log'] >= LOG_INTERVAL:
+                    await log("🔍 Chequeando monedas...")
+                    log_timestamp['last_log'] = current_time
+
     except Exception as e:
-        await log(f"[ERROR] Error crítico en websocket: {e}")
-        raise
+        await log(f"[ERROR] Error crítico en el grupo de websocket: {e}")
+
+async def price_handler(client, coins):
+    await log("🤖 PRICE TRACKER ACTIVADO")
+
+    price_history = {coin: [] for coin in coins}
     
-    finally:
-        await log("Cerrando conexión websocket...")
+    log_timestamp = {'last_log': time.time()}
+
+    coins_list = list(coins)
+    groups = [coins_list[i:i + GROUP_SIZE] for i in range(0, len(coins_list), GROUP_SIZE)]
+    
+    await log(f"Monedas filtradas: {len(coins)}. Creando {len(groups)} grupos de websockets...")
+
+    tasks = [
+        asyncio.create_task(
+            handle_websocket_group(client, group, price_history, log_timestamp)
+        ) for group in groups
+    ]
+    
+    await asyncio.gather(*tasks)
