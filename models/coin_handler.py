@@ -5,11 +5,13 @@ async def coin_handler(client):
     """
     Filter & listener coin function.
     """
+
+    await log("🟡 coin_handler function started.")
     
     try:
         all_tickers = await client.futures_ticker()
 
-        await log(f"Coins listed: {len(all_tickers)}")
+        await log(f"🟡 Coins listed: {len(all_tickers)}")
 
         f_coins = []
         for ticker in all_tickers:
@@ -21,10 +23,10 @@ async def coin_handler(client):
                 except Exception:
                     continue
         
-        await log(f"Coins filtered: {len(f_coins)}")
+        await log(f"🟢 Coins filtered: {len(f_coins)}")
 
         coins = set(f_coins)
         await price_handler(client, coins)
 
     except Exception as e:
-        await log(f"Error filtering the coins. {e}")
+        await log(f"🔴 Error filtering the coins. {e}")

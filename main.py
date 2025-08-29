@@ -3,9 +3,8 @@ import threading
 import os
 import pytz
 from datetime import datetime, time, timedelta
-from contextlib import asynccontextmanager
 from flask import Flask, jsonify
-from binance import AsyncClient, BinanceSocketManager
+from binance import AsyncClient
 
 from models.coin_handler import coin_handler
 from models.log_handler import log
@@ -15,17 +14,19 @@ async def binance_client():
     Binance client creator.
     """
 
-    await log("Creando cliente de Binance...")
+    await log("🟡 Creating Binance client.")
 
     client = await AsyncClient.create(
         api_key=os.getenv("API_KEY"), 
         api_secret=os.getenv("API_SECRET")
     )
 
-    await log("Cliente creado exitosamente")
+    await log("🟢 Binance client created sucessfully.")
     return client
 
 async def main():
+    await log("🟢 Bot started.")
+
     client = None
     try:
         client = await binance_client()
@@ -52,11 +53,11 @@ async def main():
             await coin_handler(client)
 
     except Exception as e:
-        await log(f"[ERROR CRÍTICO] Error en la función main: {e}")
+        await log(f"🔴 [ERROR CRÍTICO] Error en la función main: {e}")
     finally:
         if client:
             await client.close_connection()
-            await log("Conexión cerrada.")
+            await log("🔴 Conexión cerrada.")
 
 def run_bot():
     asyncio.run(main())
