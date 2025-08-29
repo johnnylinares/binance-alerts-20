@@ -7,22 +7,19 @@ async def coin_handler(client):
     """
     
     try:
-        exchange_info = await client.futures_exchange_info()
+        all_tickers = await client.futures_ticker()
 
-        l_coins = [
-            s['symbol'] for s in exchange_info['symbols'] if s['symbol'].endswith('USDT')
-        ]
-
-        await log(f"Coins listed: {len(l_coins)}")
+        await log(f"Coins listed: {len(all_tickers)}")
 
         f_coins = []
-        for symbol in l_coins:
-            try:
-                ticker = await client.futures_ticker(symbol=symbol)
-                if float(ticker['quoteVolume']) <= 1_000_000_000 and float(ticker['quoteVolume']) >= 10_000_000:
-                    f_coins.append(symbol)
-            except Exception:
-                continue
+        for ticker in all_tickers:
+            if ticker['symbol'].endswith('USDT'):
+                try:
+                    volume = float(ticker['quoteVolume'])
+                    if 10_000_000 <= volume <= 1_000_000_000:
+                        f_coins.append(ticker['symbol'])
+                except Exception:
+                    continue
         
         await log(f"Coins filtered: {len(f_coins)}")
 
