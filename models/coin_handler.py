@@ -19,7 +19,7 @@ async def coin_handler(client):
         for symbol in l_coins:
             try:
                 ticker = await client.futures_ticker(symbol=symbol)
-                if float(ticker['quoteVolume']) <= 1_000_000_000:
+                if float(ticker['quoteVolume']) <= 1_000_000_000 and float(ticker['quoteVolume']) >= 10_000_000:
                     f_coins.append(symbol)
             except Exception:
                 continue
