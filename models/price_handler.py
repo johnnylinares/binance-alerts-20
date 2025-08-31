@@ -16,7 +16,7 @@ async def handle_websocket_group(client, coins_group, price_history, log_timesta
     bm = BinanceSocketManager(client)
     
     streams = [f"{coin.lower()}@ticker" for coin in coins_group]
-    ts = bm.multiplex_socket(streams, queue_size=1000)
+    ts = bm.multiplex_socket(streams)
 
     try:
         await log(f"[Grupo {group_id}] Creando websocket para {len(coins_group)} monedas.")
