@@ -7,26 +7,26 @@ from models.alert_handler import alert_handler
 THRESHOLD = 20
 TIME_WINDOW = 2 * 60 * 60 + 10 * 60
 LOG_INTERVAL = 600
-GROUP_SIZE = 50
+GROUP_SIZE = 20
 
-async def handle_websocket_group(client, coins_group, price_history, log_timestamp):
+async def handle_websocket_group(client, coins_group, price_history, log_timestamp, group_id):
     """
     Handles a single websocket connection for a group of coins.
     """
     bm = BinanceSocketManager(client)
     
     streams = [f"{coin.lower()}@ticker" for coin in coins_group]
-    ts = bm.multiplex_socket(streams)
+    ts = bm.multiplex_socket(streams, queue_size=1000)
 
     try:
-        await log(f"Creando websocket para {len(coins_group)} monedas.")
+        await log(f"[Grupo {group_id}] Creando websocket para {len(coins_group)} monedas.")
         
         async with ts as tscm:
             while True:
                 msg = await tscm.recv()
                 
                 if 'data' not in msg or not isinstance(msg['data'], dict):
-                    await log(f"[DEBUG] Mensaje de control o inesperado recibido: {msg}")
+                    await log(f"[Grupo {group_id}][DEBUG] Mensaje de control o inesperado recibido: {msg}")
                     continue
                 
                 ticker_data = msg['data']
@@ -50,21 +50,23 @@ async def handle_websocket_group(client, coins_group, price_history, log_timesta
                             percentage_change = ((price - old_price) / old_price) * 100
                             
                             if abs(percentage_change) >= THRESHOLD:
-                                await log(f"📊 COIN FOUND: {symbol}")
+                                await log(f"[Grupo {group_id}] 📊 COIN FOUND: {symbol}")
                                 
                                 emoji = "🟢📈" if percentage_change > 0 else "🔴📉"
 
                                 await alert_handler(symbol, percentage_change, price, emoji, volume)
                                 
                                 price_history[symbol] = []
-                    
-                    current_time = time.time()
-                    if current_time - log_timestamp['last_log'] >= LOG_INTERVAL:
-                        await log("🔍 Chequeando monedas...")
-                        log_timestamp['last_log'] = current_time
+                
+                current_time = time.time()
+                if current_time - log_timestamp['last_log'] >= LOG_INTERVAL:
+                    await log(f"[Grupo {group_id}] 🔍 Chequeando monedas...")
+                    log_timestamp['last_log'] = current_time
 
     except Exception as e:
-        await log(f"[ERROR] Error crítico en el grupo de websocket: {e}")
+        await log(f"[Grupo {group_id}][ERROR] Error crítico en el grupo de websocket: {e}")
+    finally:
+        await log(f"[Grupo {group_id}] El websocket se ha cerrado.")
 
 async def price_handler(client, coins):
     """
@@ -82,8 +84,8 @@ async def price_handler(client, coins):
 
     tasks = [
         asyncio.create_task(
-            handle_websocket_group(client, group, price_history, log_timestamp)
-        ) for group in groups
+            handle_websocket_group(client, group, price_history, log_timestamp, i+1)
+        ) for i, group in enumerate(groups)
     ]
 
     try:
