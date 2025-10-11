@@ -2,6 +2,7 @@ import asyncio
 import threading
 import os
 import pytz
+
 from datetime import datetime, time, timedelta
 from flask import Flask, jsonify
 from binance import AsyncClient
@@ -13,8 +14,6 @@ async def binance_client():
     """
     Binance client creator.
     """
-
-    await log("🟡 Creating Binance client.")
 
     client = await AsyncClient.create(
         api_key=os.getenv("API_KEY"), 
@@ -32,39 +31,59 @@ async def main():
         client = await binance_client()
         timezone_caracas = pytz.timezone('America/Caracas')
 
-        await coin_handler(client)
-
         while True:
-            now = datetime.now(timezone_caracas)
-            target_time_today = timezone_caracas.localize(
-                datetime.combine(now.date(), time(23, 59))
-            )
+            try:
+                await log("🔄 Iniciando ciclo de tracking de precios...")
+                
+                now = datetime.now(timezone_caracas)
+                target_time_today = timezone_caracas.localize(
+                    datetime.combine(now.date(), time(23, 59))
+                )
+                
+                if now > target_time_today:
+                    target_time = target_time_today + timedelta(days=1)
+                else:
+                    target_time = target_time_today
+                
+                wait_seconds = (target_time - now).total_seconds()
+                
+                await log(f"⏰ Próxima actualización de monedas en {wait_seconds/3600:.1f} horas (a las 23:59)")
             
-            if now > target_time_today:
-                target_time = target_time_today + timedelta(days=1)
-            else:
-                target_time = target_time_today
-            
-            wait_seconds = (target_time - now).total_seconds()
-            
-            await asyncio.sleep(wait_seconds)
-            
-            await log("🔄 Hora de la re-ejecución diaria. Actualizando lista de monedas...")
-            await coin_handler(client)
+                try:
+                    await asyncio.wait_for(
+                        coin_handler(client, wait_seconds),
+                        timeout=wait_seconds + 60 
+                    )
+                except asyncio.TimeoutError:
+                    await log("⏰ Timeout alcanzado. Reiniciando tracking de precios...")
+                
+                await log("🔄 Ciclo completado. Actualizando lista de monedas...")
+                
+            except Exception as e:
+                await log(f"[ERROR] Error in tracking cycle: {e}")
+                await log("[RETRY] Waiting 60 seconds before retrying...")
+                await asyncio.sleep(60)
 
     except Exception as e:
-        await log(f"🔴 [ERROR CRÍTICO] Error en la función main: {e}")
+        await log(f"[ERROR] Error en la función main: {e}")
     finally:
         if client:
             await client.close_connection()
-            await log("🔴 Conexión cerrada.")
+            await log("[CLIENT] Binance client closed.")
 
 def run_bot():
+    """
+    Ejecuta el bot en el event loop de asyncio.
+    """
     asyncio.run(main())
 
 def keep_bot():
+    """
+    Mantiene el bot corriendo en un thread separado.
+    """
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
+    return bot_thread
 
 app = Flask(__name__)
 
@@ -76,6 +95,19 @@ def home():
 def ping():
     return jsonify({"status": "ok"}), 200
 
+@app.route('/health')
+def health():
+    """
+    Endpoint adicional para health checks de Render.
+    """
+    return jsonify({
+        "status": "healthy",
+        "service": "binance-telegram-bot",
+        "timestamp": datetime.now().isoformat()
+    }), 200
+
 if __name__ == "__main__":
-    keep_bot()
-    app.run(host='0.0.0.0', port=8000)
+    bot_thread = keep_bot()
+    
+    port = int(os.getenv("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)

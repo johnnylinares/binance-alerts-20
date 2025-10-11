@@ -1,7 +1,7 @@
 from models.log_handler import log
 from models.price_handler import price_handler
 
-async def coin_handler(client):
+async def coin_handler(client, duration_seconds):
     """
     Filter & listener coin function.
     """
@@ -20,13 +20,15 @@ async def coin_handler(client):
                     volume = float(ticker['quoteVolume'])
                     if 10_000_000 <= volume <= 1_000_000_000:
                         f_coins.append(ticker['symbol'])
-                except Exception:
+                except (ValueError, KeyError, TypeError):
                     continue
         
         await log(f"🟢 Coins filtered: {len(f_coins)}")
 
         coins = set(f_coins)
-        await price_handler(client, coins)
+        
+        await price_handler(client, coins, duration_seconds)
 
     except Exception as e:
         await log(f"🔴 Error filtering the coins. {e}")
+        raise
