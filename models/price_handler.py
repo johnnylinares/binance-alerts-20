@@ -7,7 +7,7 @@ from models.alert_handler import alert_handler
 THRESHOLD = 20
 TIME_WINDOW = 2 * 60 * 60 + 10 * 60
 LOG_INTERVAL = 600
-GROUP_SIZE = 200
+GROUP_SIZE = 100
 
 async def handle_websocket_group(client, coins_group, price_history, group_id, alert_queue, stop_event):
     """
