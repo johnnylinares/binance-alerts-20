@@ -29,25 +29,13 @@ async def main():
     client = None
     try:
         client = await binance_client()
-        timezone_caracas = pytz.timezone('America/Caracas')
 
         while True:
             try:
                 await log("🔄 Iniciando ciclo de tracking de precios...")
                 
-                now = datetime.now(timezone_caracas)
-                target_time_today = timezone_caracas.localize(
-                    datetime.combine(now.date(), time(23, 59))
-                )
-                
-                if now > target_time_today:
-                    target_time = target_time_today + timedelta(days=1)
-                else:
-                    target_time = target_time_today
-                
-                wait_seconds = (target_time - now).total_seconds()
-                
-                await log(f"⏰ Próxima actualización de monedas en {wait_seconds/3600:.1f} horas (a las 23:59)")
+                wait_seconds = 6 * 60 * 60
+                await log(f"⏰ Próxima actualización de monedas en {wait_seconds/3600:.1f} horas.")
             
                 try:
                     await asyncio.wait_for(
