@@ -6,7 +6,7 @@ from models.alert_handler import alert_handler
 
 THRESHOLD = 20
 TIME_WINDOW = 7800 
-GROUP_SIZE = 200
+GROUP_SIZE = 50
 
 async def _handle_websocket_stream(bm: BinanceSocketManager, streams: list, price_history: dict, group_id: int):
     """
