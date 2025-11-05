@@ -1,9 +1,8 @@
 import asyncio
 import threading
 import os
-import pytz
 
-from datetime import datetime, time, timedelta
+from datetime import datetime
 from flask import Flask, jsonify
 from binance import AsyncClient
 
@@ -11,10 +10,6 @@ from models.coin_handler import coin_handler
 from models.log_handler import log
 
 async def binance_client():
-    """
-    Binance client creator.
-    """
-
     client = await AsyncClient.create(
         api_key=os.getenv("API_KEY"), 
         api_secret=os.getenv("API_SECRET")
@@ -60,15 +55,9 @@ async def main():
             await log("[CLIENT] Binance client closed.")
 
 def run_bot():
-    """
-    Ejecuta el bot en el event loop de asyncio.
-    """
     asyncio.run(main())
 
 def keep_bot():
-    """
-    Mantiene el bot corriendo en un thread separado.
-    """
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
     return bot_thread
@@ -85,9 +74,6 @@ def ping():
 
 @app.route('/health')
 def health():
-    """
-    Endpoint adicional para health checks de Render.
-    """
     return jsonify({
         "status": "healthy",
         "service": "binance-telegram-bot",
