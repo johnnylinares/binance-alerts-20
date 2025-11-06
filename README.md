@@ -28,8 +28,8 @@ A bot that uses the Binance API to monitor futures coins and send automatic aler
 ### 1\. Clone the repository
 
 ```bash
-git clone https://github.com/johnnylinares/binance-alerts-20.git
-cd binance-alerts-20
+git clone https://github.com/johnnylinares/binance-scalping-signals-bot.git
+cd binance-scalping-signals-bot
 ```
 
 ### 2\. Install dependencies
@@ -128,7 +128,7 @@ TIME_WINDOW = 7800 # 2h 10m in seconds
 ## 🔧 Project Structure
 
 ```
-binance-alerts-20/
+binance-scalping-signals-bot/
 ├── main.py                 # Main entry point
 ├── config/
 │   └── settings.py         # Configuration and environment variables
@@ -177,7 +177,7 @@ This bot is for educational and informational purposes only. It does not constit
 
 If you have problems or questions:
 
-- Open an [Issue](https://github.com/johnnylinares/binance-alerts-20/issues)
+- Open an [Issue](https://github.com/johnnylinares/binance-scalping-signals-bot/issues)
 
 ---
 
