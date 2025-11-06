@@ -1,29 +1,27 @@
-# 🪙 Binance Alerts 20%
+# 🤖 Binance Scalping Signals Bot
 
 A bot that uses the Binance API to monitor futures coins and send automatic alerts when it detects significant movements of 20% or more.
 
 ## 📊 Features
 
-  - **Real-Time Monitoring**: Tracks cryptocurrency prices using Binance WebSockets
-  - **Smart Alerts**: Automatically notifies of price changes ≥20% within 3-hour windows
-  - **Anti-Spam**: System that prevents duplicate alerts
-  - **Batch Processing**: Efficiently handles multiple symbols while respecting Binance limits
-  - **24/7 Uptime**: Integrated web server to keep the bot active continuously
+- **Real-Time Monitoring**: Tracks cryptocurrency prices using Binance WebSockets
+- **Smart Alerts**: Automatically notifies of price changes ≥20% within 2h 10m windows
+- **Batch Processing**: Efficiently handles multiple symbols while respecting Binance limits
+- **24/7 Uptime**: Integrated web server to keep the bot active continuously
 
 ## 🛠️ Technologies Used
 
-  - **Python 3.8+**
-  - **Binance API**: For real-time market data
-  - **Telegram Bot API**: For sending alerts
-  - **Flask**: Web server for uptime
-  - **AsyncIO**: Asynchronous programming for better performance
+- **Python 3.12.4+**
+- **Binance API**: For real-time market data
+- **Telegram Bot API**: For sending alerts
+- **Flask**: Web server for uptime
+- **AsyncIO**: Asynchronous programming for better performance
 
 ## 📋 Prerequisites
 
 1.  **Binance account** with API enabled
 2.  **Telegram Bot** created with @BotFather
 3.  **Telegram Channel/Group** to receive alerts
-4.  **Google account** for Google Sheets (optional)
 
 ## ⚙️ Configuration
 
@@ -104,12 +102,12 @@ The server will be available at `http://localhost:8000`
 💵 $45,230.50 💰 $1,234.56M
 ```
 
-  - 🟢📈 = Price increase
-  - 🔴📉 = Price decrease
-  - Cryptocurrency symbol
-  - Percentage change
-  - Current price
-  - Volume in millions
+- 🟢📈 = Price increase
+- 🔴📉 = Price decrease
+- Cryptocurrency symbol
+- Percentage change
+- Current price
+- Volume in millions
 
 ## ⚡ Advanced Configuration
 
@@ -124,12 +122,8 @@ THRESHOLD = 20.0  # Change to your desired percentage
 ### Modify the time window
 
 ```python
-TIME_WINDOW = 2 * 60 * 60  # 2 hours in seconds
+TIME_WINDOW = 7800 # 2h 10m in seconds
 ```
-
-### Add more symbols
-
-Modify the `coin_handler` function in `models/coin_handler.py`
 
 ## 🔧 Project Structure
 
@@ -141,6 +135,7 @@ binance-alerts-20/
 ├── models/
 │   ├── alert_handler.py    # Telegram alert handling
 │   ├── coin_handler.py     # Price monitoring logic
+│   ├── log_handler.py      # Simple log function
 │   └── price_handler.py    # Cryptocurrency symbol management
 ├── requirements.txt        # Python dependencies
 ├── .env                    # Environment variables (do not include in git)
@@ -151,20 +146,20 @@ binance-alerts-20/
 
 ### Connection error to Binance
 
-  - Verify that your API Key and Secret are correct
-  - Make sure the API Key has reading permissions enabled
-  - Check that you haven't exceeded Binance's rate limits
+- Verify that your API Key and Secret are correct
+- Make sure the API Key has reading permissions enabled
+- Check that you haven't exceeded Binance's rate limits
 
 ### Bot doesn't send messages
 
-  - Confirm that the bot is an administrator of the channel
-  - Verify that the CHANNEL\_ID is correct (it must include the `-` for channels)
-  - Check that the BOT\_TOKEN is valid
+- Confirm that the bot is an administrator of the channel
+- Verify that the CHANNEL_ID is correct (it must include the `-` for channels)
+- Check that the BOT_TOKEN is valid
 
 ### Performance issues
 
-  - The bot automatically handles multiple symbols in batches
-  - If you experience lag, reduce the number of monitored symbols
+- The bot automatically handles multiple symbols in batches
+- If you experience lag, reduce the number of monitored symbols
 
 ## 🤝 Contribute
 
@@ -182,9 +177,8 @@ This bot is for educational and informational purposes only. It does not constit
 
 If you have problems or questions:
 
-  - Open an [Issue](https://github.com/johnnylinares/binance-alerts-20/issues)
-  - Contact the developer: [johnnylinares261@gmail.com]
+- Open an [Issue](https://github.com/johnnylinares/binance-alerts-20/issues)
 
------
+---
 
 ⭐ If this project is useful to you, don't forget to give it a star\!

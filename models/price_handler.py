@@ -4,58 +4,32 @@ from binance import BinanceSocketManager
 from models.log_handler import log
 from models.alert_handler import alert_handler
 
-# --- Constantes de Configuración ---
+# MAIN CONFIG
 
-# Umbral de alerta en porcentaje
 THRESHOLD = 20
-
-# 2 horas y 10 minutos en segundos (2 * 60 * 60 + 10 * 60)
-TIME_WINDOW = 7800 
-
-# Tamaño del grupo de monedas por conexión de websocket.
-# 50 es un valor seguro para evitar que la URL de conexión sea rechazada.
-GROUP_SIZE = 50
-
-# Intervalo del log "Heartbeat" (en segundos)
-LOG_INTERVAL = 600 # 10 minutos
-
-# --- Lógica del Websocket ---
+TIME_WINDOW = 7800 # 2h10m (s)
+GROUP_SIZE = 50 
+LOG_INTERVAL = 600 # 10m (s)
 
 async def _handle_websocket_stream(client, streams: list, price_history: dict, group_id: int):
     """
-    Función interna que maneja un único stream multiplexado para un grupo de monedas.
-    Esta tarea está diseñada para ser iniciada y cancelada externamente por price_handler.
+    An internal function that handles a single multiplexed stream for a group of currencies.
+    This task is designed to be started and canceled externally by price_handler.
     """
     
-    await log(f"[Grupo {group_id}] Creando websocket para {len(streams)} monedas.")
+    await log(f"[Group {group_id}]: Creating websocket for {len(streams)} coins.")
     
-    # 1. Crear el Manager.
-    bm = BinanceSocketManager(client)
-    
-    # 2. ¡ESTA ES LA CORRECCIÓN DEFINITIVA!
-    # Usamos el atributo correcto del SocketManager para FUTUROS.
-    ts = bm.futures_multiplex_socket(streams)
-
-    last_log_time = time.time()
+    bm = BinanceSocketManager(client) # Manager Creation
+    ts = bm.futures_multiplex_socket(streams) # Mutiple Socket for Futures
 
     try:
         async with ts as tscm:
             while True:
                 try:
-                    # Esperar mensaje
                     msg = await asyncio.wait_for(tscm.recv(), timeout=5.0)
-                
                 except asyncio.TimeoutError:
-                    # --- Log "Heartbeat" (Cada 10 min) ---
-                    # Se ejecuta si no llegan mensajes (lo cual es normal).
-                    current_time = time.time()
-                    if (current_time - last_log_time) > LOG_INTERVAL:
-                        # Usamos create_task para no bloquear el bucle
-                        asyncio.create_task(log(f"[Grupo {group_id}] ❤️ Heartbeat. Monitoreando {len(streams)} monedas."))
-                        last_log_time = current_time
                     continue
 
-                # --- Procesamiento del Mensaje ---
                 if 'data' not in msg or not isinstance(msg['data'], dict):
                     continue
                 
@@ -77,22 +51,19 @@ async def _handle_websocket_stream(client, streams: list, price_history: dict, g
                     history = price_history[symbol]
                     history.append((now, price))
                     
-                    # Limpieza eficiente del historial
                     while history and (now - history[0][0]) > TIME_WINDOW:
                         history.pop(0)
                     
                     if len(history) < 2:
                         continue
 
-                    # --- Lógica de Alerta ---
                     old_price = history[0][1]
                     percentage_change = ((price - old_price) / old_price) * 100
                     
                     if abs(percentage_change) >= THRESHOLD:
                         emoji = ("🟢", "📈") if percentage_change > 0 else ("🔴", "📉")
-                        log_msg = f"[Grupo {group_id}] 📊 COIN FOUND: {symbol} ({percentage_change:+.2f}%)"
+                        log_msg = f"[Group {group_id}] 📊 COIN FOUND: {symbol} ({percentage_change:+.2f}%)"
                         
-                        # Alertas "Fire-and-forget"
                         asyncio.create_task(log(log_msg))
                         asyncio.create_task(alert_handler(
                             symbol,
@@ -105,39 +76,33 @@ async def _handle_websocket_stream(client, streams: list, price_history: dict, g
                         price_history[symbol] = []
                 
                 except (ValueError, KeyError, TypeError) as e:
-                    asyncio.create_task(log(f"[Grupo {group_id}] Error procesando data: {e} | Data: {ticker_data}"))
+                    asyncio.create_task(log(f"[Group {group_id}]: Error processing data: {e} | Data: {ticker_data}"))
                     continue
 
+
     except asyncio.CancelledError:
-        await log(f"[Grupo {group_id}] Websocket cancelado (cierre normal).")
+        await log(f"[Group {group_id}]: Websocket canceled (normal).")
         
     except Exception as e:
-        # Aquí es donde veías el error 400. Ahora no debería aparecer.
-        await log(f"[Grupo {group_id}][ERROR] Error crítico en websocket: {e}")
+        await log(f"[Group {group_id}]: [ERROR] Critic error in websocket: {e}")
         
     finally:
-        await log(f"[Grupo {group_id}] Websocket cerrado.")
-
-# --- Función Pública (Handler Principal) ---
+        await log(f"[Group {group_id}]: Websocket closed.")
 
 async def price_handler(client, coins, duration_seconds):
     """
-    Función principal para gestionar los websockets de precios.
-    
-    Args:
-        client: Cliente AsyncClient de Binance
-        coins: Set de monedas a monitorear
-        duration_seconds: Duración total del monitoreo antes de refrescar
+    Main function to manage the websocket tasks.
     """
-    await log("🤖 PRICE TRACKER ACTIVADO (v2.4 Corregido)")
+
+    await log("🤖 PRICE TRACKER ACTIVATED")
 
     price_history = {coin: [] for coin in coins}
     
     coins_list = list(coins)
     groups = [coins_list[i:i + GROUP_SIZE] for i in range(0, len(coins_list), GROUP_SIZE)]
     
-    await log(f"Monedas filtradas: {len(coins)}. Creando {len(groups)} grupos (Max {GROUP_SIZE} monedas/grupo)...")
-    await log(f"⏰ Duración del ciclo: {duration_seconds/3600:.1f} horas")
+    await log(f"Filtered coins: {len(coins)}. Creating {len(groups)} groups (Max {GROUP_SIZE} coins/group)...")
+    await log(f"⏰ Cycle duration: {duration_seconds/3600:.1f} hours")
 
     websocket_tasks = []
     for i, group_coins in enumerate(groups):
@@ -145,7 +110,7 @@ async def price_handler(client, coins, duration_seconds):
         streams = [f"{coin.lower()}@ticker" for coin in group_coins]
         
         if not streams:
-            await log(f"[Grupo {group_id}] Omitido (sin monedas).")
+            await log(f"[Group {group_id}] omitted (without coins).")
             continue
         
         task = asyncio.create_task(
@@ -154,21 +119,19 @@ async def price_handler(client, coins, duration_seconds):
         websocket_tasks.append(task)
 
     if not websocket_tasks:
-        await log("[WARNING] No se crearon tareas de websocket (lista de monedas vacía).")
+        await log("[WARNING] No websocket tasks were created (empty coin list).")
         await asyncio.sleep(duration_seconds)
         return
 
-    # Esperar la duración del ciclo
     try:
         await asyncio.sleep(duration_seconds)
         
     except asyncio.CancelledError:
-        await log("[PRICE_HANDLER] Ciclo principal cancelado externamente.")
+        await log("[PRICE_HANDLER] Main cycle canceled externally.")
         raise
         
     finally:
-        # Cierre Limpio (Graceful Shutdown)
-        await log("⏰ Tiempo de ciclo alcanzado. Cerrando todos los websockets...")
+        await log("⏰ Cycle time reached. Closing all websockets...")
         
         for task in websocket_tasks:
             task.cancel()
@@ -177,6 +140,6 @@ async def price_handler(client, coins, duration_seconds):
         
         for i, res in enumerate(results):
             if isinstance(res, Exception) and not isinstance(res, asyncio.CancelledError):
-                await log(f"[ERROR] Tarea de Websocket {i+1} finalizó con error: {res}")
+                await log(f"[ERROR] Websocket task {i+1} finished with error: {res}")
                 
-        await log("✅ Todos los websockets cerrados. Price handler finalizado.")
+        await log("✅ All websockets were closed. Price handler finished.")

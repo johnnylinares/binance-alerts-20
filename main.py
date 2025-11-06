@@ -30,7 +30,6 @@ async def main():
                 await log("🔄 Iniciando ciclo de tracking de precios...")
                 
                 wait_seconds = 6 * 60 * 60
-                await log(f"⏰ Próxima actualización de monedas en {wait_seconds/3600:.1f} horas.")
             
                 try:
                     await asyncio.wait_for(
@@ -38,9 +37,9 @@ async def main():
                         timeout=wait_seconds + 60 
                     )
                 except asyncio.TimeoutError:
-                    await log("⏰ Timeout alcanzado. Reiniciando tracking de precios...")
+                    await log("⏰ Timeout reached. Restarting price tracking...")
                 
-                await log("🔄 Ciclo completado. Actualizando lista de monedas...")
+                await log("🔄 Cycle completed. Updating coin list...")
                 
             except Exception as e:
                 await log(f"[ERROR] Error in tracking cycle: {e}")
@@ -48,7 +47,7 @@ async def main():
                 await asyncio.sleep(60)
 
     except Exception as e:
-        await log(f"[ERROR] Error en la función main: {e}")
+        await log(f"[ERROR] Error in main: {e}")
     finally:
         if client:
             await client.close_connection()
