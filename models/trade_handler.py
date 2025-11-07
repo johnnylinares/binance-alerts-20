@@ -42,7 +42,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
 
     try:
         async with ts as tscm:
-            while hit is not "✅ TP4 (+20%)" or hit is not "❌ SL (-5%)":
+            while hit != "✅ TP4 (+20%)" or hit != "❌ SL (-5%)":
                 try:
                     msg = await asyncio.wait_for(tscm.recv(), timeout=60.0)
                 except asyncio.TimeoutError:
