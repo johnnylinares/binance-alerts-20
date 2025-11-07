@@ -42,7 +42,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
 
     try:
         async with ts as tscm:
-            while hit is None:
+            while hit is not "✅ TP4 (+20%)" or hit is not "❌ SL (-5%)":
                 try:
                     msg = await asyncio.wait_for(tscm.recv(), timeout=60.0)
                 except asyncio.TimeoutError:
@@ -62,17 +62,61 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
                     continue
                 
                 if direction == "LONG":
-                    if current_price <= tp1_price:
+                    if hit == None and current_price <= tp1_price:
                         hit = "✅ TP1 (+5%)"
                         hit_price = current_price
+                        await tp_sl_alert_handler(
+                            hit=hit,
+                            original_message_id=original_message_id
+                        )
+                    if hit == "✅ TP1 (+5%)" and current_price <= tp2_price:
+                        hit = "✅ TP2 (+10%)"
+                        hit_price = current_price
+                        await tp_sl_alert_handler(
+                            hit=hit,
+                            original_message_id=original_message_id
+                        )
+                    if hit == "✅ TP2 (+10%)" and current_price <= tp3_price:
+                        hit = "✅ TP3 (+15%)"
+                        hit_price = current_price
+                        await tp_sl_alert_handler(
+                            hit=hit,
+                            original_message_id=original_message_id
+                        )
+                    if hit == "✅ TP3 (+15%)" and current_price <= tp4_price:
+                        hit = "✅ TP4 (+20%)"
+                        hit_price = current_price
+
                     elif current_price >= sl_price:
                         hit = "❌ SL (-5%)"
                         hit_price = current_price
                         
-                elif direction == "SHORT":
-                    if current_price >= tp1_price:
+                if direction == "SHORT":
+                    if hit == None and current_price >= tp1_price:
                         hit = "✅ TP1 (+5%)"
                         hit_price = current_price
+                        await tp_sl_alert_handler(
+                            hit=hit,
+                            original_message_id=original_message_id
+                        )
+                    if hit == "✅ TP1 (+5%)" and current_price >= tp2_price:
+                        hit = "✅ TP2 (+10%)"
+                        hit_price = current_price
+                        await tp_sl_alert_handler(
+                            hit=hit,
+                            original_message_id=original_message_id
+                        )
+                    if hit == "✅ TP2 (+10%)" and current_price >= tp3_price:
+                        hit = "✅ TP3 (+15%)"
+                        hit_price = current_price
+                        await tp_sl_alert_handler(
+                            hit=hit,
+                            original_message_id=original_message_id
+                        )
+                    if hit == "✅ TP3 (+15%)" and current_price >= tp4_price:
+                        hit = "✅ TP4 (+20%)"
+                        hit_price = current_price
+
                     elif current_price <= sl_price:
                         hit = "❌ SL (-5%)"
                         hit_price = current_price
@@ -85,7 +129,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
         return # Salir en caso de error
 
     # 5. Si se alcanzó un objetivo, notificar y cerrar
-    if hit:
+    if hit == "❌ SL (-5%)" or hit == "✅ TP4 (+20%)":
         await log(f"¡{hit} ALCANZADO! {symbol} a ${hit_price}")
         
         try:
