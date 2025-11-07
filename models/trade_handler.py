@@ -42,7 +42,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
 
     try:
         async with ts as tscm:
-            while hit != "✅ TP4 (+20%)" or hit != "❌ SL (-5%)":
+            while hit != "✅ TP4 (+20%)" and hit != "❌ SL (-5%)":
                 try:
                     msg = await asyncio.wait_for(tscm.recv(), timeout=60.0)
                 except asyncio.TimeoutError:
@@ -65,29 +65,18 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
                     if hit == None and current_price <= tp1_price:
                         hit = "✅ TP1 (+5%)"
                         hit_price = current_price
-                        await tp_sl_alert_handler(
-                            hit=hit,
-                            original_message_id=original_message_id
-                        )
                     if hit == "✅ TP1 (+5%)" and current_price <= tp2_price:
                         hit = "✅ TP2 (+10%)"
                         hit_price = current_price
-                        await tp_sl_alert_handler(
-                            hit=hit,
-                            original_message_id=original_message_id
-                        )
                     if hit == "✅ TP2 (+10%)" and current_price <= tp3_price:
                         hit = "✅ TP3 (+15%)"
                         hit_price = current_price
-                        await tp_sl_alert_handler(
-                            hit=hit,
-                            original_message_id=original_message_id
-                        )
                     if hit == "✅ TP3 (+15%)" and current_price <= tp4_price:
                         hit = "✅ TP4 (+20%)"
                         hit_price = current_price
 
-                    elif current_price >= sl_price:
+                    # El SL se puede alcanzar en cualquier momento
+                    if current_price >= sl_price:
                         hit = "❌ SL (-5%)"
                         hit_price = current_price
                         
@@ -95,29 +84,18 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
                     if hit == None and current_price >= tp1_price:
                         hit = "✅ TP1 (+5%)"
                         hit_price = current_price
-                        await tp_sl_alert_handler(
-                            hit=hit,
-                            original_message_id=original_message_id
-                        )
                     if hit == "✅ TP1 (+5%)" and current_price >= tp2_price:
                         hit = "✅ TP2 (+10%)"
                         hit_price = current_price
-                        await tp_sl_alert_handler(
-                            hit=hit,
-                            original_message_id=original_message_id
-                        )
                     if hit == "✅ TP2 (+10%)" and current_price >= tp3_price:
                         hit = "✅ TP3 (+15%)"
                         hit_price = current_price
-                        await tp_sl_alert_handler(
-                            hit=hit,
-                            original_message_id=original_message_id
-                        )
                     if hit == "✅ TP3 (+15%)" and current_price >= tp4_price:
                         hit = "✅ TP4 (+20%)"
                         hit_price = current_price
 
-                    elif current_price <= sl_price:
+                    # El SL se puede alcanzar en cualquier momento
+                    if current_price <= sl_price:
                         hit = "❌ SL (-5%)"
                         hit_price = current_price
 
@@ -128,8 +106,8 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
         await log(f"TRADE HANDLER: [ERROR] en socket de {symbol}: {e}")
         return # Salir en caso de error
 
-    # 5. Si se alcanzó un objetivo, notificar y cerrar
-    if hit == "❌ SL (-5%)" or hit == "✅ TP4 (+20%)":
+    # 5. Si se alcanzó un objetivo (TP o SL), notificar.
+    if hit:
         await log(f"¡{hit} ALCANZADO! {symbol} a ${hit_price}")
         
         try:
