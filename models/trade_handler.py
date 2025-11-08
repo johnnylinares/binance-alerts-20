@@ -38,7 +38,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
     stream = [f"{symbol.lower()}@ticker"]
     ts = bm.futures_multiplex_socket(stream)
     
-    hit = 0 # Almacenará si fue "TP" o "SL"
+    hit = 0 # Data for TP/SL
 
     try:
         async with ts as tscm:
@@ -108,12 +108,9 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
                     
     except asyncio.CancelledError:
         await log(f"TRADE HANDLER: Monitoreo de {symbol} cancelado.")
-        return # Salir si la tarea principal se cancela
+        return
     except Exception as e:
         await log(f"TRADE HANDLER: [ERROR] en socket de {symbol}: {e}")
-        return # Salir en caso de error
+        return
 
     await log(f"TRADE HANDLER: Finalizado monitoreo de {symbol}.")
-
-
-    # TRADE HANDLER: [ERROR] al enviar alerta TP/SL para UAIUSDT: tp_sl_alert_handler() got an unexpected keyword argument 'reply_to_id'
