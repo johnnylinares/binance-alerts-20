@@ -23,7 +23,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
     entry_price = price
     start_time = time.time()
     created_at_utc = datetime.now(pytz.utc)
-    close_at_utc = None
+    closed_at_utc = None
 
     if direction == "SHORT":
         tp1_price = entry_price * (1 - TP1_PERCENTAGE)
@@ -138,7 +138,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
             "volume": volume,
             "percentage": percentage_change,
             "result": hit * 5,
-            "msg_id": original_message_id
+            "msg_id": int(original_message_id)
         }
         
         await insert_trade(trade_data)

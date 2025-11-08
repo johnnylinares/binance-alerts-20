@@ -19,7 +19,6 @@ async def insert_trade(trade_data: dict):
     Inserta un trade COMPLETO en la base de datos.
     """
     try:
-        supabase.table('trades').insert(trade_data).execute()
-        await log(f"[DB_HANDLER] Trade insertado: {trade_data.get('symbol')} -> {trade_data.get('final_hit')}")
+        supabase.table('signals-data').insert(trade_data).execute()
     except Exception as e:
         await log(f"[DB_HANDLER] ERROR al insertar trade: {e} | Data: {trade_data}")
