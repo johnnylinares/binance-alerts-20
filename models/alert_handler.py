@@ -23,13 +23,13 @@ async def tp_sl_alert_handler(hit, original_message_id):
     elif hit == 0:
         alert = "➖ SIN MOVIMIENTO"
     elif hit == 1:
-        alert = "✅ TP1 (-5%)"
+        alert = "✅ TP1 (+5%)"
     elif hit == 2:
-        alert = "✅ TP2 (-10%)"
+        alert = "✅ TP2 (+10%)"
     elif hit == 3:
-        alert = "✅ TP3 (-15%)"
+        alert = "✅ TP3 (+15%)"
     elif hit == 4:
-        alert = "✅ TP4 (-20%)"
+        alert = "✅ TP4 (+20%)"
 
     await bot.send_message(
         chat_id=os.getenv("CHANNEL_ID"),
