@@ -14,7 +14,7 @@ async def alert_handler(symbol, percentage_change, price, emoji, volume):
         text=f'{emoji[0]} #{symbol} {emoji[1]} {percentage_change:+.2f}%\n💵 ${price} 💰 ${volume}M'
     )
     print(f"{symbol} alert sended.")
-    return msg.message_id
+    return msg.message_id, 
 
 
 async def tp_sl_alert_handler(hit, original_message_id):

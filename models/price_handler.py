@@ -30,7 +30,8 @@ async def alert_worker(bm, symbol, percentage_change, price, emoji, volume, grou
             symbol,
             percentage_change,
             price,
-            original_msg_id
+            original_msg_id,
+            volume
         )
 
     except Exception as e:
