@@ -3,6 +3,7 @@ import asyncio
 from binance import BinanceSocketManager
 from models.log_handler import log
 from models.alert_handler import alert_handler
+from models.trade_handler import trade_handler
 
 # MAIN CONFIG
 
@@ -10,6 +11,31 @@ THRESHOLD = 20
 TIME_WINDOW = 7800 # 2h10m (s)
 GROUP_SIZE = 50 
 LOG_INTERVAL = 600 # 10m (s)
+
+async def alert_worker(bm, symbol, percentage_change, price, emoji, volume, group_id):
+    try:
+        log_msg = f"[Group {group_id}] 📊 COIN FOUND: {symbol} ({percentage_change:+.2f}%)"
+        await log(log_msg)
+
+        original_msg_id = await alert_handler(
+            symbol,
+            percentage_change,
+            price,
+            emoji,
+            volume
+        )
+
+        await trade_handler(
+            bm,
+            symbol,
+            percentage_change,
+            price,
+            original_msg_id
+        )
+
+    except Exception as e:
+        await log(f"[ERROR] En _process_alert_and_start_trade para {symbol}: {e}")
+    
 
 async def _handle_websocket_stream(client, streams: list, price_history: dict, group_id: int):
     """
@@ -62,17 +88,9 @@ async def _handle_websocket_stream(client, streams: list, price_history: dict, g
                     
                     if abs(percentage_change) >= THRESHOLD:
                         emoji = ("🟢", "📈") if percentage_change > 0 else ("🔴", "📉")
-                        log_msg = f"[Group {group_id}] 📊 COIN FOUND: {symbol} ({percentage_change:+.2f}%)"
                         
-                        asyncio.create_task(log(log_msg))
-                        asyncio.create_task(alert_handler(
-                            symbol,
-                            percentage_change,
-                            price,
-                            emoji,
-                            volume
-                        ))
-                        
+                        asyncio.create_task(alert_worker(bm, symbol, percentage_change, price, emoji, volume, group_id))
+
                         price_history[symbol] = []
                 
                 except (ValueError, KeyError, TypeError) as e:
