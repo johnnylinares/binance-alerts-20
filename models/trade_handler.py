@@ -21,8 +21,11 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
     
     direction = "SHORT" if percentage_change > 0 else "LONG"
     entry_price = price
+    close_price = None
+
     start_time = time.time()
-    created_at_utc = datetime.now(pytz.utc)
+    venezuela_tz = pytz.timezone('America/Caracas')
+    created_at_utc = datetime.now(venezuela_tz)
     closed_at_utc = None
 
     if direction == "SHORT":
@@ -69,58 +72,102 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
                 if direction == "SHORT":
                     if hit == 0 and current_price >= sl_price:
                         hit = -1
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
                     
                     elif hit == 0 and current_price <= tp1_price:
                         hit = 1
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
 
                     elif hit == 1 and current_price <= tp2_price:
                         hit = 2
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
 
                     elif hit == 2 and current_price <= tp3_price:
                         hit = 3
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
 
                     elif hit == 3 and current_price <= tp4_price:
                         hit = 4
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
                         
                 if direction == "LONG":
                     if hit == 0 and current_price <= sl_price:
                         hit = -1
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
 
                     elif hit == 0 and current_price >= tp1_price:
                         hit = 1
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
                         
                     elif hit == 1 and current_price >= tp2_price:
                         hit = 2
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
 
                     elif hit == 2 and current_price >= tp3_price:
                         hit = 3
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
 
                     elif hit == 3 and current_price >= tp4_price:
                         hit = 4
-                        closed_at_utc = datetime.now(pytz.utc)
-                        await tp_sl_alert_handler(hit, original_message_id)
+                        close_price = current_price
+                        closed_at_utc = datetime.now(venezuela_tz)
+                        result = (
+                            round(((close_price / entry_price) - 1) * 100, 2)
+                        )
+                        await tp_sl_alert_handler(hit, result, original_message_id)
 
             if time.time() - start_time > 7800 and hit == 0:
-                closed_at_utc = datetime.now(pytz.utc)
-                await tp_sl_alert_handler(hit, original_message_id)
+                closed_at_utc = datetime.now(venezuela_tz)
+                close_price = current_price
+                result = (
+                    round(((close_price / entry_price) - 1) * 100, 2)
+                )
+                await tp_sl_alert_handler(hit, result, original_message_id)
                     
     except asyncio.CancelledError:
         await log(f"TRADE HANDLER: Monitoreo de {symbol} cancelado.")
@@ -128,7 +175,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
     except Exception as e:
         await log(f"TRADE HANDLER: [ERROR] en socket de {symbol}: {e}")
         return
-    
+
     finally:
         trade_data = {
             "created_at": created_at_utc.isoformat(),
@@ -137,8 +184,12 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
             "direction": direction,
             "volume": volume,
             "percentage": percentage_change,
-            "result": hit * 5,
-            "msg_id": original_message_id
+            "result": (
+                round(((close_price / entry_price) - 1) * 100, 2)
+            ),
+            "msg_id": original_message_id,
+            "entry_price": entry_price,
+            "close_price": close_price,
         }
         
         await insert_trade(trade_data)
