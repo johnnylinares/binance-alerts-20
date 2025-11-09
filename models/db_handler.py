@@ -10,9 +10,9 @@ key: str = os.environ.get("SUPABASE_SERVICE_KEY")
 
 try:
     supabase: Client = create_client(url, key)
-    log("[DB_HANDLER] Conexión con Supabase creada.")
+    await log("[DB_HANDLER] Conexión con Supabase creada.")
 except Exception as e:
-    log(f"[DB_HANDLER] ERROR al crear cliente de Supabase: {e}")
+    await log(f"[DB_HANDLER] ERROR al crear cliente de Supabase: {e}")
 
 async def insert_trade(trade_data: dict):
     """
