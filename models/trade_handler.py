@@ -138,7 +138,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
             "volume": volume,
             "percentage": percentage_change,
             "result": hit * 5,
-            "msg_id": int(original_message_id)
+            "msg_id": original_message_id
         }
         
         await insert_trade(trade_data)
