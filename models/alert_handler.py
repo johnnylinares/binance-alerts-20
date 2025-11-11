@@ -19,17 +19,17 @@ async def alert_handler(symbol, percentage_change, price, emoji, volume):
 
 async def tp_sl_alert_handler(hit, result, original_message_id):
     if hit == -1:
-        alert = f"❌ SL ({result})"
+        alert = f"❌ SL ({result}%)"
     elif hit == 0:
-        alert = f"➖ CERRADA ({result})"
+        alert = f"➖ CERRADA ({result}%)"
     elif hit == 1:
-        alert = f"✅ TP1 ({result})"
+        alert = f"✅ TP1 (+{result}%)"
     elif hit == 2:
-        alert = f"✅ TP2 ({result})"
+        alert = f"✅ TP2 (+{result}%)"
     elif hit == 3:
-        alert = f"✅ TP3 ({result})"
+        alert = f"✅ TP3 (+{result}%)"
     elif hit == 4:
-        alert = f"✅ TP4 ({result})"
+        alert = f"✅ TP4 (+{result}%)"
 
     await bot.send_message(
         chat_id=os.getenv("CHANNEL_ID"),
