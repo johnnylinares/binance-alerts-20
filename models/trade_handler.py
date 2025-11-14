@@ -181,7 +181,7 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
             "closed_at": closed_at,
             "symbol": symbol,
             "direction": "SHORT" if percentage_change > 0 else "LONG",
-            "volume": volume,
+            "volume": round(volume, 2),
             "percentage": round(percentage_change, 2),
             "result": result,
             "msg_id": original_message_id,

@@ -9,7 +9,7 @@ from models.trade_handler import trade_handler
 
 THRESHOLD = 20
 TIME_WINDOW = 7800 # 2h10m (s)
-GROUP_SIZE = 50 
+GROUP_SIZE = 50
 LOG_INTERVAL = 600 # 10m (s)
 
 async def alert_worker(bm, symbol, percentage_change, price, emoji, volume, group_id):
@@ -72,7 +72,7 @@ async def _handle_websocket_stream(client, streams: list, price_history: dict, g
                 
                 try:
                     price = float(ticker_data['c'])
-                    volume = round(float(ticker_data['q']) / 1000000, 1)
+                    volume = float(ticker_data['q'])
                     now = time.time()
                     
                     history = price_history[symbol]

@@ -8,7 +8,7 @@ load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_SERVICE_KEY")
 
-supabase: Client = None  # Inicializa como None
+supabase: Client = None
 
 try:
     supabase: Client = create_client(url, key)
@@ -20,16 +20,13 @@ async def insert_trade(trade_data: dict):
     """
     Inserta un trade COMPLETO en la base de datos.
     """
-    # Comprobar si la conexión falló al inicio
     if supabase is None:
         await log("[DB_HANDLER] ERROR: Supabase client no está inicializado.")
         return
 
     try:
-        # CORRECCIÓN: Supabase NO usa await - es una operación síncrona
         response = supabase.table('signals-data').insert(trade_data).execute()
         
-        # Opcional: verificar si la inserción fue exitosa
         if response.data:
             await log(f"[DB_HANDLER] Trade insertado: {trade_data.get('symbol')} -> {trade_data.get('result')}%")
         else:
