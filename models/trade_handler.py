@@ -89,71 +89,72 @@ async def trade_handler(bm, symbol, percentage_change, price, original_message_i
                 # SHORT (percentage_change > 0)
                 if percentage_change > 0:
                     if hit == 0 and current_price >= sl_price:
-                        hit = -1
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(-1, entry_price, close_price, percentage_change)
+                        hit = -1
                     
                     elif hit == 0 and current_price <= tp_prices[0]:
-                        hit = 1
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(1, entry_price, close_price, percentage_change)
+                        hit = 1
 
                     elif hit == 1 and current_price <= tp_prices[1]:
-                        hit = 2
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(2, entry_price, close_price, percentage_change)
+                        hit = 2
 
                     elif hit == 2 and current_price <= tp_prices[2]:
-                        hit = 3
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(3, entry_price, close_price, percentage_change)
+                        hit = 3
 
                     elif hit == 3 and current_price <= tp_prices[3]:
-                        hit = 4
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(4, entry_price, close_price, percentage_change)
+                        hit = 4
                         
                 # LONG (percentage_change < 0)
                 else:
                     if hit == 0 and current_price <= sl_price:
-                        hit = -1
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(-1, entry_price, close_price, percentage_change)
+                        hit = -1
 
                     elif hit == 0 and current_price >= tp_prices[0]:
-                        hit = 1
+                        close_price = current_price
                         closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(1, entry_price, close_price, percentage_change)
-                        close_price = current_price
+                        hit = 1
+                        
                         
                     elif hit == 1 and current_price >= tp_prices[1]:
-                        hit = 2
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(2, entry_price, close_price, percentage_change)
+                        hit = 2
 
                     elif hit == 2 and current_price >= tp_prices[2]:
-                        hit = 3
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(3, entry_price, close_price, percentage_change)
+                        hit = 3
 
                     elif hit == 3 and current_price >= tp_prices[3]:
-                        hit = 4
-                        closed_at = datetime.now(vzla_utc).isoformat()
                         close_price = current_price
+                        closed_at = datetime.now(vzla_utc).isoformat()
                         result = await hited(4, entry_price, close_price, percentage_change)
+                        hit = 4
 
             # Manejar timeout - cerrar trade si no llegó a ningún TP/SL
             if time.time() - start_time >= 7800 and hit == 0:
-                closed_at = datetime.now(vzla_utc).isoformat()
                 close_price = current_price
+                closed_at = datetime.now(vzla_utc).isoformat()
                 result = await hited(0, entry_price, close_price, percentage_change)
                     
     except asyncio.CancelledError:
